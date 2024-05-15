@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 
-from functools import partial
 from jax import jit
+from functools import partial
 
 # Partial applies the jit decorator with static arguments, i.e. which should be kept constant for compilation,
 # but would require a re-compilation if its value changes. We don't expect k to change throughout a single run.
@@ -12,33 +12,30 @@ def get_spline_basis(x, grid, k=3):
         and applies them to the input x, batched.
         
         Args:
-            x : inputs
-                shape (batch_size, layer_size)
-            grid : augmented grid
-                shape (layer_size, G + 2k + 1)
-            k : order of the B-spline basis functions. Default: 3
+        -----
+            x (jnp.array): inputs
+                shape (batch_size, n_in*n_out)
+            grid (jnp.array): augmented grid
+                shape (n_in*n_out, G + 2k + 1)
+            k (int): order of the B-spline basis functions. Default: 3
         
         Returns:
-            splines : spline basis functions applied on input
-                shape (batch_size, layer_size, G + k)
+        --------
+            basis_splines (jnp.array): spline basis functions applied on inputs
+                shape (batch_size, n_in*n_out, G + k)
     '''
 
     # Broadcasting for vectorized operations
     x = jnp.expand_dims(x, axis=-1)
 
     # k = 0 case
-    splines = ((x >= grid[:, :-1]) & (x < grid[:, 1:])).astype(float)
+    basis_splines = ((x >= grid[:, :-1]) & (x < grid[:, 1:])).astype(float)
     
     # Recursion done through iteration
     for K in range(1, k+1):
         left_term = (x - grid[:, :-(K + 1)]) / (grid[:, K:-1] - grid[:, :-(K + 1)])
         right_term = (grid[:, K + 1:] - x) / (grid[:, K + 1:] - grid[:, 1:(-K)])
         
-        splines = left_term * splines[:, :, :-1] + right_term * splines[:, :, 1:]
+        basis_splines = left_term * basis_splines[:, :, :-1] + right_term * basis_splines[:, :, 1:]
 
-    return splines
-
-@jit
-def get_coeffs(new_basis, old_spline):
-
-    return
+    return basis_splines

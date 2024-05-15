@@ -1,19 +1,16 @@
-import jax
 import jax.numpy as jnp
-import math
+
 from flax import linen as nn
-from flax.training import train_state
 from flax.linen import initializers
 
 from bases.splines import get_spline_basis
-from bases.splines import get_coeffs
+from utils import solve_full_lstsq
 
 class KANLayer(nn.Module):
     """
     KANLayer class
-    
 
-    Attributes:
+    Args:
     -----------
         n_in (int): number of layer's incoming nodes. Default: 2
         n_out (int): number of layer's outgoing nodes. Default: 5
@@ -25,12 +22,6 @@ class KANLayer(nn.Module):
         residual (nn.Module): function that is applied on samples to calculate residual activation. Default: nn.swish
         noise_std (float): noise for the initialization of spline coefficients. Default: 0.1
         grid_e (float): parameter that defines if the grids are uniform (grid_e = 0.0) or sample-dependent (grid_e = 1.0). Intermediate values correspond to a linear mixing of the two cases. Default: 0.05
-    
-    Methods:
-    --------
-        setup(): Initializes the grid and the trainable parameters of the KAN Layer
-        basis(x): Passes the input x, the grid and k into the get_spline_basis() function of the bases module
-        call(): Corresponds to the layer's forward pass
     """
     
     n_in: int = 2
@@ -48,6 +39,11 @@ class KANLayer(nn.Module):
 
     
     def setup(self):
+        """
+        Registers and initializes all parameters of the KANLayer. Specifically:
+            * grid: non-trainable variable
+            * c_basis, c_spl, c_res: trainable parameters
+        """
         # Calculate the step size for the knot vector based on its end values
         h = (self.grid_range[1] - self.grid_range[0]) / (self.G - 1)
 
@@ -83,10 +79,71 @@ class KANLayer(nn.Module):
 
     
     def basis(self, x):
+        """
+        Uses k and the current grid to calculate the values of spline basis functions on the input
+
+        Args:
+        -----
+            x (jnp.array): inputs
+                shape (batch_size, n_in*n_out)
+
+        Returns:
+        --------
+            bases (jnp.array): spline basis functions applied on inputs
+                shape (batch_size, n_in*n_out, G + k)
+        """
         grid = self.grid.value
-        return get_spline_basis(x, grid, self.k)
+        k = self.k
+        bases = get_spline_basis(x, grid, k)
+        
+        return bases
+
+    # NEED TO CHECK SHAPES, BY NO MEANS READY
+    def new_coeffs(self, x, y):
+        """
+        Utilizes the new grid's basis functions, Bj(x), and the old grid's splines, Sum(ciBix(x)), to approximate a good initialization for the updated grid's parameters
+
+        Args:
+        -----
+            x (jnp.array): inputs
+                shape (batch_size, n_in*n_out)
+            y (jnp.array): values of old grid's splines calculated on the inputs
+                shape (TODO)
+
+        Returns:
+        --------
+            c_j (jnp.array): new coefficients corresponding to the updated grid
+                shape (n_in*n_out, G' + k)
+        """
+        # Get the Bj(x) for the new grid
+        A = self.basis(x)
+        # Cast into shape (size, batch, G' + k)
+        B_j = jnp.transpose(A, (1, 0, 2))
+        
+        # Cast the old Sum(ciBi(x)) into shape (size, batch, 1)
+        #c_iB_i = jnp.transpose(y, (1, 0, 2))
+        c_iB_i = y # Dummy
+        
+        c_j = solve_full_lstsq(B_j, c_iB_i)
+
+        # Need more here? E.g. reshaping the coefficients of the new spline basis?
+        
+        return c_j
 
 
     def __call__(self, x):
+        """
+        Equivalent to the layer's forward pass.
+
+        Args:
+        -----
+            x (jnp.array): inputs
+                shape (batch_size, n_in*n_out)
+
+        Returns:
+        --------
+            TODO : TODO
+                shape (TODO)
+        """
         # Dummy
         return x
