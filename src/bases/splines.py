@@ -38,3 +38,7 @@ def get_spline_basis(x, grid, k=3):
 
     return splines
 
+@jit
+def get_coeffs(new_basis, old_spline):
+
+    return

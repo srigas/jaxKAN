@@ -1,2 +1,4 @@
-jax[cpu]==0.4.28
 jupyterlab==4.2.0
+numpy==1.26.4
+flax==0.8.3
+jax[cpu]==0.4.28
