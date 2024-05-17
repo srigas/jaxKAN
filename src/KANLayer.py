@@ -1,3 +1,4 @@
+import jax
 import jax.numpy as jnp
 
 from flax import linen as nn
@@ -14,8 +15,6 @@ class KANLayer(nn.Module):
     -----------
         n_in (int): number of layer's incoming nodes. Default: 2
         n_out (int): number of layer's outgoing nodes. Default: 5
-        G (int): the size of the initial knot vector's intervals. Default: 5
-        grid_range (tuple): the ends of the initial knot vector. Default (-1,1)
         k (int): the order of the spline basis functions. Default: 3
         const_spl (float/bool): coefficient of the spline function in the overall activation. If set to False, then it is trainable per activation. Default: False
         const_res (float/bool): coefficient of the residual function in the overall activation. If set to False, then it is trainable per activation. Default: False
@@ -26,9 +25,12 @@ class KANLayer(nn.Module):
     
     n_in: int = 2
     n_out: int = 5
-    G: int = 5
-    grid_range: tuple = (-1, 1)
     k: int = 3
+
+    """
+    init_G: int = 5
+    init_knot: tuple = (-1, 1)
+    """
 
     const_spl: float or bool = False
     const_res: float or bool = False
@@ -44,24 +46,39 @@ class KANLayer(nn.Module):
             * grid: non-trainable variable
             * c_basis, c_spl, c_res: trainable parameters
         """
+
+        # What follows resembles the efficientkan implementation
+        # It is kind of pointless to do all of these initializations, so instead
+        # we will initialize dummies and create an update_grid function that
+        # will have to be applied for all layers during the first forward pass, as well as
+        # every X epochs - or whenever some other criterion is met
+        # These will be kept as a reference, until we decide that we're sticking to our method
+        """
+        # Initialize a value of G, this will be updated during training
+        self.G = self.variable('state', 'G', lambda: jnp.array(self.init_G)
+        
         # Calculate the step size for the knot vector based on its end values
-        h = (self.grid_range[1] - self.grid_range[0]) / (self.G - 1)
+        h = (self.init_knot[1] - self.init_knot[0]) / (self.G - 1)
 
         # Create the initial knot vector and perform augmentation
         # Now it is expanded from G+1 points to G+1 + 2k points, because k points are appended at each of its ends
-        grid = jnp.arange(-self.k, self.G + self.k + 1, dtype=jnp.float32) * h + self.grid_range[0]
+        grid = jnp.arange(-self.k, self.G + self.k + 1, dtype=jnp.float32) * h + self.init_knot[0]
         
         # Expand for broadcasting - the shape becomes (n_in*n_out, G + 2k + 1), so that the grid
         # can be passed in all n_in*n_out spline basis functions simultaneously
         grid = jnp.expand_dims(grid, axis=0)
         grid = jnp.tile(grid, (self.n_in*self.n_out, 1))
+        """
+
+        # Random initialization of grid corresponding to a random value of G, here 3
+        grid = jnp.ones((self.n_in*self.n_out, 3+2*self.k+1))
 
         # Store the grid as a non trainable variable
         self.grid = self.variable('state', 'grid', lambda: grid)
         
         # Register & initialize the spline basis functions' coefficients as trainable parameters
         # They are drawn from a normal distribution with zero mean and an std of noise_std
-        self.c_basis = self.param('c_basis', initializers.normal(stddev=self.noise_std), (self.n_in * self.n_out, self.G + self.k))
+        self.c_basis = self.param('c_basis', initializers.normal(stddev=self.noise_std), (self.n_in * self.n_out, 3 + self.k))
         
         # If const_spl is set as a float value, treat it as non trainable and pass it to the c_spl array with shape (n_in*n_out)
         # Otherwise register it as a trainable parameter of the same size and initialize it
@@ -77,7 +94,7 @@ class KANLayer(nn.Module):
         elif self.const_res is False:
             self.c_res = self.param('c_res', initializers.constant(1.0), (self.n_in * self.n_out,))
 
-    
+
     def basis(self, x):
         """
         Uses k and the current grid to calculate the values of spline basis functions on the input
@@ -85,12 +102,12 @@ class KANLayer(nn.Module):
         Args:
         -----
             x (jnp.array): inputs
-                shape (batch_size, n_in*n_out)
+                shape (batch, n_in*n_out)
 
         Returns:
         --------
             bases (jnp.array): spline basis functions applied on inputs
-                shape (batch_size, n_in*n_out, G + k)
+                shape (batch, n_in*n_out, G + k)
         """
         grid = self.grid.value
         k = self.k
@@ -98,37 +115,99 @@ class KANLayer(nn.Module):
         
         return bases
 
-    # NEED TO CHECK SHAPES, BY NO MEANS READY
-    def new_coeffs(self, x, y):
+    
+    def new_coeffs(self, x, ciBi):
         """
         Utilizes the new grid's basis functions, Bj(x), and the old grid's splines, Sum(ciBix(x)), to approximate a good initialization for the updated grid's parameters
 
         Args:
         -----
             x (jnp.array): inputs
-                shape (batch_size, n_in*n_out)
-            y (jnp.array): values of old grid's splines calculated on the inputs
-                shape (TODO)
+                shape (batch, n_in*n_out)
+            ciBi (jnp.array): values of old grid's splines calculated on the inputs
+                shape (n_in*n_out, batch)
 
         Returns:
         --------
-            c_j (jnp.array): new coefficients corresponding to the updated grid
+            cj (jnp.array): new coefficients corresponding to the updated grid
                 shape (n_in*n_out, G' + k)
         """
         # Get the Bj(x) for the new grid
         A = self.basis(x)
-        # Cast into shape (size, batch, G' + k)
-        B_j = jnp.transpose(A, (1, 0, 2))
+        # Cast into shape (n_in*n_out, batch, G' + k)
+        Bj = jnp.transpose(A, (1, 0, 2))
         
-        # Cast the old Sum(ciBi(x)) into shape (size, batch, 1)
-        #c_iB_i = jnp.transpose(y, (1, 0, 2))
-        c_iB_i = y # Dummy
-        
-        c_j = solve_full_lstsq(B_j, c_iB_i)
+        # Expand ciBi from (n_in*n_out, batch) to (n_in*n_out, batch, 1)
+        ciBi = jnp.expand_dims(ciBi, axis=-1)
 
-        # Need more here? E.g. reshaping the coefficients of the new spline basis?
+        # Solve for the new coefficients
+        cj = solve_full_lstsq(Bj, ciBi)
+        # Cast into shape (n_in*n_out, G' + k)
+        cj = jnp.squeeze(ci, axis=-1)
         
-        return c_j
+        return cj
+
+
+    def update_grid(self, x, G_new):
+        """
+        Performs a grid update given a new value for G, G_new, and adapts it to the given data, x.
+
+        Args:
+        -----
+            x (jnp.array): inputs
+                shape (batch, n_in*n_out)
+            G_new (int): Size of the new grid (in terms of intervals)
+
+        """
+
+        # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
+        # the current coefficients and Bi(x) are the current spline basis functions
+        batch = x.size(0)
+        margin = 0.01
+
+        Bi = self.basis(x) # (batch, n_in*n_out, G+k)
+        Bi = jnp.transpose(Bi, (1, 2, 0)) # (n_in*n_out, G+k, batch)
+        ci = self.c_basis # (n_in*n_out, G+k)
+        ciBi = jnp.einsum('ij,ijk->ik', ci, Bi) # (n_in*n_out, batch)
+
+        # Update the grid itself, based on the inputs and the new value for G
+        # Sort inputs
+        x_sorted = jnp.sort(x, axis=0)
+
+        # Get an adaptive grid of size G' + 1
+        # Essentially we sample points from x, based on their density
+        grid_adaptive = x_sorted[jnp.linspace(0, batch - 1, G_new + 1, dtype=jnp.int32)]
+
+        # Get a uniform grid of size G' + 1
+        # Essentially we only consider the maximum and minimum values of x
+        uniform_step = (x_sorted[-1] - x_sorted[0] + 2 * margin) / G_new
+        grid_uniform = (
+            jnp.arange(G_new + 1).reshape(-1, 1) * uniform_step
+            + x_sorted[0]
+            - margin
+        )
+
+        # Perform a linear mixing of the two grid types
+        grid = self.grid_e * grid_uniform + (1 - self.grid_e) * grid_adaptive
+
+        # Perform grid augmentation, so that the grid is extended from G' + 1 to G' + 2k + 1 points
+        grid = jnp.concatenate(
+            [
+                grid[:1] - uniform_step * jnp.arange(spline_order, 0, -1).reshape(-1, 1),
+                grid,
+                grid[-1:] + uniform_step * jnp.arange(1, spline_order + 1).reshape(-1, 1),
+            ],
+            axis=0,
+        )
+
+        # Based on the new grid, run the new_coeffs() function to re-initialize the coefficients' values
+        cj = self.new_coeffs(x, ciBi)
+
+        # Update the grid and the coefficients
+
+        # TORCH VERSION
+        #self.grid.copy_(grid.T)
+        #self.c_basis.data.copy_(self.curve2coeff(x, unreduced_spline_output))
 
 
     def __call__(self, x):
@@ -138,7 +217,7 @@ class KANLayer(nn.Module):
         Args:
         -----
             x (jnp.array): inputs
-                shape (batch_size, n_in*n_out)
+                shape (batch, n_in*n_out)
 
         Returns:
         --------
