@@ -143,7 +143,7 @@ class KANLayer(nn.Module):
         # Solve for the new coefficients
         cj = solve_full_lstsq(Bj, ciBi)
         # Cast into shape (n_in*n_out, G' + k)
-        cj = jnp.squeeze(ci, axis=-1)
+        cj = jnp.squeeze(cj, axis=-1)
         
         return cj
 
@@ -162,7 +162,7 @@ class KANLayer(nn.Module):
 
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
         # the current coefficients and Bi(x) are the current spline basis functions
-        batch = x.size(0)
+        batch = x.shape[0]
         margin = 0.01
 
         Bi = self.basis(x) # (batch, n_in*n_out, G+k)
@@ -193,9 +193,9 @@ class KANLayer(nn.Module):
         # Perform grid augmentation, so that the grid is extended from G' + 1 to G' + 2k + 1 points
         grid = jnp.concatenate(
             [
-                grid[:1] - uniform_step * jnp.arange(spline_order, 0, -1).reshape(-1, 1),
+                grid[:1] - uniform_step * jnp.arange(self.k, 0, -1).reshape(-1, 1),
                 grid,
-                grid[-1:] + uniform_step * jnp.arange(1, spline_order + 1).reshape(-1, 1),
+                grid[-1:] + uniform_step * jnp.arange(1, self.k + 1).reshape(-1, 1),
             ],
             axis=0,
         )
@@ -203,11 +203,10 @@ class KANLayer(nn.Module):
         # Based on the new grid, run the new_coeffs() function to re-initialize the coefficients' values
         cj = self.new_coeffs(x, ciBi)
 
-        # Update the grid and the coefficients
+        # We don't update the grid and coefficients "automatically" like in PyTorch, just pass them back
+        # and handle the update by "tampering" with the variables dict which is inserted in the model
 
-        # TORCH VERSION
-        #self.grid.copy_(grid.T)
-        #self.c_basis.data.copy_(self.curve2coeff(x, unreduced_spline_output))
+        return grid, cj
 
 
     def __call__(self, x):
