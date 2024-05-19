@@ -1,5 +1,4 @@
-import jax
-import jax.numpy as jnp
+from jax import numpy as jnp
 
 from flax import linen as nn
 from flax.linen import initializers
@@ -225,8 +224,37 @@ class KANLayer(nn.Module):
 
         Returns:
         --------
-            TODO : TODO
-                shape (TODO)
+            y (jnp.array): output of the forward pass, corresponding to the weighted sum of the B-spline activation and the residual activation
+                shape (batch, n_out)
+            spl (jnp.array): the B-spline activation, to be used for the calculation of the loss function
+                shape (batch, n_out, n_in)
         """
-        # Dummy
-        return x
+        batch = x.shape[0]
+        # Extend to shape (batch, n_in*n_out)
+        x_ext = jnp.einsum('ij,k->ikj', x, jnp.ones(self.n_out,)).reshape((batch, self.n_in * self.n_out))
+        # Transpose to shape (n_in*n_out, batch)
+        x_ext = jnp.transpose(x_ext, (1, 0))
+        
+        # Calculate residual activation - shape (batch, n_in*n_out)
+        res = jnp.transpose(self.residual(x_ext), (1,0))
+
+        # Calculate spline basis activations
+        Bi = self.basis(x) # (n_in*n_out, G+k, batch)
+        ci = self.c_basis # (n_in*n_out, G+k)
+        # Calculate spline activation
+        spl = jnp.einsum('ij,ijk->ik', ci, Bi) # (n_in*n_out, batch)
+        # Transpose to shape (batch, n_in*n_out)
+        spl = jnp.transpose(spl, (1,0))
+
+        # Calculate the entire activation
+        const_spl = jnp.expand_dims(self.c_spl, axis=0)
+        const_res = jnp.expand_dims(self.c_res, axis=0)
+        y = (const_spl * spl) + (const_res * res) # (batch, n_in*n_out)
+        # Reshape and sum to cast to (batch, n_out) shape
+        y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
+        y = (1/self.n_in)*jnp.sum(y_reshaped, axis=2)
+
+        # Return the output of the forward pass, as well as the spline activation to be used in the loss function
+        spl_reshaped = jnp.reshape(spl, (batch, self.n_out, self.n_in))
+        return y, spl_reshaped
+
