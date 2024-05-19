@@ -9,7 +9,7 @@ from functools import partial
 def get_spline_basis(x_ext, grid, k=3):
     '''
         Calculates the B-spline basis functions for given grid (augmented knot vector)
-        and applies them to the augmented input x, batched.
+        and applies them to the extended input x, batched.
         
         Args:
         -----
