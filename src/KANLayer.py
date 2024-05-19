@@ -226,7 +226,7 @@ class KANLayer(nn.Module):
         --------
             y (jnp.array): output of the forward pass, corresponding to the weighted sum of the B-spline activation and the residual activation
                 shape (batch, n_out)
-            spl (jnp.array): the B-spline activation, to be used for the calculation of the loss function
+            spl_reshaped (jnp.array): the B-spline activation, to be used for the calculation of the loss function
                 shape (batch, n_out, n_in)
         """
         batch = x.shape[0]
