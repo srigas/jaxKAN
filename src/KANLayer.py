@@ -6,6 +6,7 @@ from flax.linen import initializers
 from bases.splines import get_spline_basis
 from utils import solve_full_lstsq
 
+
 class KANLayer(nn.Module):
     """
     KANLayer class
@@ -31,7 +32,7 @@ class KANLayer(nn.Module):
     residual: nn.Module = nn.swish
     
     noise_std: float = 0.1
-    grid_e: float = 0.02
+    grid_e: float = 0.15
 
     
     def setup(self):
@@ -63,7 +64,7 @@ class KANLayer(nn.Module):
         
         # Register & initialize the spline basis functions' coefficients as trainable parameters
         # They are drawn from a normal distribution with zero mean and an std of noise_std
-        self.c_basis = self.param('c_basis', initializers.normal(stddev=self.noise_std), (self.n_in * self.n_out, 3 + self.k))
+        self.c_basis = self.param('c_basis', initializers.normal(stddev=self.noise_std), (self.n_in * self.n_out, self.grid.value.shape[1]-1-self.k))
         
         # If const_spl is set as a float value, treat it as non trainable and pass it to the c_spl array with shape (n_in*n_out)
         # Otherwise register it as a trainable parameter of the same size and initialize it
@@ -121,7 +122,7 @@ class KANLayer(nn.Module):
         Returns:
         --------
             cj (jnp.array): new coefficients corresponding to the updated grid
-                shape (n_in*n_out, G' + k)
+                shape (n_in*n_out, G'+k)
         """
         
         # Get the Bj(x) for the new grid
@@ -149,6 +150,10 @@ class KANLayer(nn.Module):
                 shape (batch, n_in)
             G_new (int): Size of the new grid (in terms of intervals)
 
+        Returns:
+        --------
+            cj (jnp.array): spline function coefficients
+                shape (n_in*n_out, G_new+k)
         """
 
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
@@ -247,9 +252,9 @@ class KANLayer(nn.Module):
         spl = jnp.transpose(spl, (1,0))
 
         # Calculate the entire activation
-        const_spl = jnp.expand_dims(self.c_spl, axis=0)
-        const_res = jnp.expand_dims(self.c_res, axis=0)
-        y = (const_spl * spl) + (const_res * res) # (batch, n_in*n_out)
+        cnst_spl = jnp.expand_dims(self.c_spl, axis=0)
+        cnst_res = jnp.expand_dims(self.c_res, axis=0)
+        y = (cnst_spl * spl) + (cnst_res * res) # (batch, n_in*n_out)
         # Reshape and sum to cast to (batch, n_out) shape
         y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
         y = (1/self.n_in)*jnp.sum(y_reshaped, axis=2)
