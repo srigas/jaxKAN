@@ -9,7 +9,7 @@ from utils import solve_full_lstsq
 
 class KANLayer(nn.Module):
     """
-    KANLayer class
+    KANLayer class.
 
     Args:
     -----------
@@ -83,7 +83,7 @@ class KANLayer(nn.Module):
 
     def basis(self, x):
         """
-        Uses k and the current grid to calculate the values of spline basis functions on the input
+        Uses k and the current grid to calculate the values of spline basis functions on the input.
 
         Args:
         -----
@@ -110,7 +110,7 @@ class KANLayer(nn.Module):
     
     def new_coeffs(self, x, ciBi):
         """
-        Utilizes the new grid's basis functions, Bj(x), and the old grid's splines, Sum(ciBix(x)), to approximate a good initialization for the updated grid's parameters
+        Utilizes the new grid's basis functions, Bj(x), and the old grid's splines, Sum(ciBix(x)), to approximate a good initialization for the updated grid's parameters.
 
         Args:
         -----
@@ -231,8 +231,8 @@ class KANLayer(nn.Module):
         --------
             y (jnp.array): output of the forward pass, corresponding to the weighted sum of the B-spline activation and the residual activation
                 shape (batch, n_out)
-            spl_reshaped (jnp.array): the B-spline activation, to be used for the calculation of the loss function
-                shape (batch, n_out, n_in)
+            spl_reg (jnp.array): the array relevant to the B-spline activation, to be used for the calculation of the loss function
+                shape (n_out, n_in)
         """
         batch = x.shape[0]
         # Extend to shape (batch, n_in*n_out)
@@ -259,7 +259,15 @@ class KANLayer(nn.Module):
         y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
         y = (1/self.n_in)*jnp.sum(y_reshaped, axis=2)
 
-        # Return the output of the forward pass, as well as the spline activation to be used in the loss function
+        # Modify the spline activation array and return it along with y to be used for the regularization term of the loss function
+        # Cast grid shape from (n_in*n_out, G+2k+1) to (n_out, n_in, G+2k+1)
+        grid_reshaped = self.grid.value.reshape(self.n_out, self.n_in, -1)
+        # Extra normalization inspired by pykan - get the grid range per spline function
+        input_norm = grid_reshaped[:, :, -1] - grid_reshaped[:, :, 0] + 1e-5
+        # Reshape spl from (batch, n_in*n_out) to (batch, n_out, n_in)
         spl_reshaped = jnp.reshape(spl, (batch, self.n_out, self.n_in))
-        return y, spl_reshaped
+        # Extract the batch mean of |spl| (Eq. 2.17 in arXiv pre-print) and point-to-point normalize it with input norm
+        spl_reg = (jnp.mean(jnp.abs(spl_reshaped), axis=0))/input_norm
 
+        # Return the output of the forward pass, as well as the regularization term
+        return y, spl_reg

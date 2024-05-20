@@ -10,7 +10,7 @@ from KANLayer import KANLayer
 
 class KAN(nn.Module):
     """
-    KAN class, corresponding to a network of KANLayers
+    KAN class, corresponding to a network of KANLayers.
 
     Args:
     -----------
@@ -103,8 +103,33 @@ class KAN(nn.Module):
 
     
     def __call__(self, x):
+        """
+        Equivalent to the network's forward pass.
+
+        Args:
+        -----
+            x (jnp.array): inputs for the first layer
+                shape (batch, self.layers[0])
+
+        Returns:
+        --------
+            x (jnp.array): network output
+                shape (batch, self.layers[-1])
+            spl_regs (List[jnp.array]): a list of spl_reg arrays to be used for the loss function's regularization term.
+                size len(layer_dims)-1
+        """
+        spl_regs = []
+
+        # Pass through each layer of the KAN
         for i, layer in enumerate(self.layers):
-            x, spl_reshaped = layer(x)
+            x, spl_reg = layer(x)
+
+            # Add a bias term
             if self.add_bias:
                 x += self.biases[i]
-        return x, spl_reshaped
+
+            # Append the regularization terms per layer in a list
+            spl_regs.append(spl_reg)
+
+        # Return the total output and the regularization terms
+        return x, spl_regs

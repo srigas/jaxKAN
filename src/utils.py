@@ -10,14 +10,14 @@ def solve_single_lstsq(A_single, B_single):
     Args:
     -----
         A_single (jnp.array): matrix A of AX = B
-            shape (B, N)
+            shape (M, N)
         B_single (jnp.array): matrix B of AX = B
-            shape (B, M)
+            shape (M, K)
         
     Returns:
     --------
         single_solution (jnp.array): matrix X of AX = B
-            shape (N, M)
+            shape (N, K)
     """
     AtA = jnp.dot(A_single.T, A_single)
     AtB = jnp.dot(A_single.T, B_single)
@@ -34,14 +34,14 @@ def solve_full_lstsq(A_full, B_full):
     Args:
     -----
         A_full (jnp.array): matrix A of AX = B
-            shape (*, B, N)
+            shape (batch, M, N)
         B_full (jnp.array): matrix B of AX = B
-            shape (*, B, M)
+            shape (batch, M, K)
         
     Returns:
     --------
         full_solution (jnp.array): matrix X of AX = B
-            shape (*, N, M)
+            shape (batch, N, K)
     """
     # Define the solver for (*, ., .) dimensions
     solve_full = jax.vmap(solve_single_lstsq, in_axes=(0,0))
