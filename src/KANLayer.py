@@ -257,7 +257,7 @@ class KANLayer(nn.Module):
         y = (cnst_spl * spl) + (cnst_res * res) # (batch, n_in*n_out)
         # Reshape and sum to cast to (batch, n_out) shape
         y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
-        y = (1/self.n_in)*jnp.sum(y_reshaped, axis=2)
+        y = (1.0/self.n_in)*jnp.sum(y_reshaped, axis=2)
 
         # Modify the spline activation array and return it along with y to be used for the regularization term of the loss function
         # Cast grid shape from (n_in*n_out, G+2k+1) to (n_out, n_in, G+2k+1)
