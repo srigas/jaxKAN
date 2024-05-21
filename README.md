@@ -1,6 +1,6 @@
 # jaxKAN
 
-A JAX-based implementation of Kolmogorov-Arnold Networks
+A JAX implementation of the original Kolmogorov-Arnold Networks (KANs), using the Flax and Optax frameworks for neural networks and optimization, respectively.
 
 ## Installation
 
