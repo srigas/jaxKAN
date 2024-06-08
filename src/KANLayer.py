@@ -20,7 +20,7 @@ class KANLayer(nn.Module):
         const_res (float/bool): coefficient of the residual function in the overall activation. If set to False, then it is trainable per activation. Default: False
         residual (nn.Module): function that is applied on samples to calculate residual activation. Default: nn.swish
         noise_std (float): noise for the initialization of spline coefficients. Default: 0.1
-        grid_e (float): parameter that defines if the grids are uniform (grid_e = 0.0) or sample-dependent (grid_e = 1.0). Intermediate values correspond to a linear mixing of the two cases. Default: 0.05
+        grid_e (float): parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases. Default: 0.05
     """
     
     n_in: int = 2
@@ -93,7 +93,7 @@ class KANLayer(nn.Module):
         Returns:
         --------
             bases (jnp.array): spline basis functions applied on inputs
-                shape (n_in*n_out, G+k, batch_size)
+                shape (n_in*n_out, G+k, batch)
         """
         batch = x.shape[0]
         # Extend to shape (batch, n_in*n_out)
