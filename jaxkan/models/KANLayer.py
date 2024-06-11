@@ -3,8 +3,8 @@ from jax import numpy as jnp
 from flax import linen as nn
 from flax.linen import initializers
 
-from bases.splines import get_spline_basis
-from utils.general import solve_full_lstsq
+from ..bases.splines import get_spline_basis
+from ..utils.general import solve_full_lstsq
 
 
 class KANLayer(nn.Module):
