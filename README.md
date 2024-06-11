@@ -11,19 +11,3 @@ Despite their overall potential in the Deep Learning field, the authors of KANs 
 ## Why JAX?
 
 Because speed + scientific computing. Need we say more? Plus, even though all tests were performed on CPU, in JAX it is more than straightforward to switch to GPU.
-
-## General Information
-
-The main codebase lies in the `src` directory, while an `.ipynb` notebook with documentation and comments can be found in `docs`. For a full example on how to use jaxKAN on a task also tackled by the authors of pykan, please visit the `tests` directory. Below you can see some results from this example.
-
-![Loss Curves](docs/loss_curves.png)
-
-*Figure 1: Loss Curves, depicting some pleateaus during grid extension, as in the original implementation. The spikes are due to the re-initialization of Adam, which is performed in a somewhat smooth manner in our implementation.*
-
-![Evaluation](docs/eval_results.png)
-
-*Figure 2: Comparison between ground truth and evaluated results for the task of learning a multivariate function with a [4,2,1,1] KAN.*
-
-## Future Work
-
-There are still many things to try out, for example different optimizers, hyper-parameter tuning, smoother initializations during extension, and so on. For now, this is a totally stable version, as showcased in the example task.
