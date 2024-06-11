@@ -5,7 +5,7 @@ from flax import linen as nn
 from flax.linen import initializers
 from flax.core import unfreeze
 
-from KANLayer import KANLayer
+from models.KANLayer import KANLayer
 
 
 class KAN(nn.Module):
