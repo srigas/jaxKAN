@@ -2,9 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='jaxkan',
-    version='0.1.3',
+    version='0.1.4',
     packages=find_packages(),
     install_requires=[
+        'scipy==1.13.1',
         'numpy==1.26.4',
         'flax==0.8.3',
         'jax[cpu]==0.4.28',
