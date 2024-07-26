@@ -24,12 +24,13 @@ Despite their overall potential in the Deep Learning field, the authors of KANs 
 If you utilized `jaxKAN` for your own academic work, please consider using the following citation, which is the paper introducing the framework:
 
 ```
-@article{jaxKAN,
-  author = {Rigas, Spyros and Papachristou, Michalis and Papadopoulos, Theofilos and Anagnostopoulos, Fotios and Alexandridis, Georgios},
-  title = {{Adaptive training of grid-dependent physics-informed Kolmogorov-Arnold networks}},
-  journal = {arXiv pre-print},
-  doi = {10.48550/arXiv.2407.17611},
-  month = {jul},
-  year = {2024}
-  }
+@misc{rigas2024adaptivetraininggriddependentphysicsinformed,
+      title={Adaptive Training of Grid-Dependent Physics-Informed Kolmogorov-Arnold Networks}, 
+      author={Spyros Rigas and Michalis Papachristou and Theofilos Papadopoulos and Fotios Anagnostopoulos and Georgios Alexandridis},
+      year={2024},
+      eprint={2407.17611},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2407.17611}, 
+}
 ```
