@@ -19,6 +19,17 @@ The default installation requires `jax[cpu]`, but there is also a `gpu` version 
 Despite their overall potential in the Deep Learning field, the authors of KANs emphasized their performance when it comes to scientific computing, in tasks such as Symbolic Regression or solving PDEs. This is why we put emphasis on preserving their original form, albeit less computationally efficient, as it allows the user to utilize the full regularization terms presented in the [arXiv pre-print](https://arxiv.org/abs/2404.19756) and not the "mock" regularization terms presented, for instance, in the [efficient-kan](https://github.com/Blealtan/efficient-kan/tree/master) implementation.
 
 
-## Why JAX?
+## Citation
 
-Because speed + scientific computing. Need we say more? Plus, even though all tests were performed on CPU, in JAX it is more than straightforward to switch to GPU.
+If you utilized `jaxKAN` for your own academic work, please consider using the following citation, which is the paper introducing the framework:
+
+```
+@article{jaxKAN,
+  author = {Rigas, Spyros and Papachristou, Michalis and Papadopoulos, Theofilos and Anagnostopoulos, Fotios and Alexandridis, Georgios},
+  title = {{Adaptive training of grid-dependent physics-informed Kolmogorov-Arnold networks}},
+  journal = {arXiv pre-print},
+  doi = {10.48550/arXiv.2407.17611},
+  month = {jul},
+  year = {2024}
+  }
+```
