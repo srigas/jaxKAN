@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='jaxkan',
-    version='0.1.7',
+    version='0.1.8',
     packages=find_packages(),
     install_requires=[
         'scipy==1.13.1',
