@@ -1,14 +1,12 @@
 from typing import List
 from jax import numpy as jnp
 
-from flax import linen as nn
-from flax.linen import initializers
-from flax.core import unfreeze
+from flax import nnx
 
 from .KANLayer import KANLayer
 
 
-class KAN(nn.Module):
+class KAN(nnx.Module):
     """
     KAN class, corresponding to a network of KANLayers.
 
@@ -23,39 +21,37 @@ class KAN(nn.Module):
         noise_std (float): input for KANLayer class - see KANLayer.py
         grid_e (float): input for KANLayer class - see KANLayer.py
     """
-    layer_dims: List[int]
-    add_bias: bool = True
-    
-    k: int = 3
-    const_spl: float or bool = False
-    const_res: float or bool = False
-    residual: nn.Module = nn.swish
-    noise_std: float = 0.1
-    grid_e: float = 0.15
+    def __init__(self,
+                 layer_dims: List[int], add_bias: bool = True, k: int = 3,
+                 G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05,
+                 residual: nnx.Module = nnx.silu, noise_std: float = 0.15,
+                 rngs: nnx.Rngs = nnx.Rngs(42)
+                ):
 
+        # Initialize KAN layers based on layer_dims
+        self.layers = [
+                KANLayer(
+                    n_in=layer_dims[i],
+                    n_out=layer_dims[i + 1],
+                    k=k,
+                    G=G,
+                    grid_range=grid_range,
+                    grid_e=grid_e,
+                    residual=residual,
+                    noise_std=noise_std,
+                    rngs=rngs
+                )
+                for i in range(len(layer_dims) - 1)
+            ]
     
-    def setup(self):
-        """
-        Registers and initializes all KANLayers of the architecture.
-        Optionally includes a trainable bias for each KANLayer.
-        """
-        # Initialize KAN layers based on layer_dims            
-        self.layers = [KANLayer(
-                                n_in=self.layer_dims[i],
-                                n_out=self.layer_dims[i + 1],
-                                k=self.k,
-                                const_spl=self.const_spl,
-                                const_res=self.const_res,
-                                residual=self.residual,
-                                noise_std=self.noise_std,
-                                grid_e=self.grid_e
-                            )
-                            for i in range(len(self.layer_dims) - 1)
-                      ]
-        
-        if self.add_bias:
-            self.biases = [self.param(f'bias_{i}', initializers.zeros, (dim,)) for i, dim in enumerate(self.layer_dims[1:])]
-
+        if add_bias:
+            self.biases = [
+                nnx.Param(jnp.zeros((dim,))) for dim in layer_dims[1:]
+            ]
+        else:
+            self.biases = [
+                jnp.zeros((dim,)) for dim in layer_dims[1:]
+            ]
     
     def update_grids(self, x, G_new):
         """
@@ -68,38 +64,16 @@ class KAN(nn.Module):
             G_new (int): Size of the new grid (in terms of intervals)
 
         """
-        # Unfreeze is used to avoid in-place edits - we do not want to update the
-        # parameters this way, we will simply pass the new object manually at the next calls
-        updated_params = unfreeze(self.scope.variables()['params'])
-        updated_state = unfreeze(self.scope.variables()['state'])
 
         # Loop over each layer
         for i, layer in enumerate(self.layers):
-            # Extract the variables for the current layer
-            layer_variables = {
-                'params': updated_params[f'layers_{i}'],
-                'state': updated_state[f'layers_{i}']
-            }
             
-            # Call the update_grid method on the current layer
-            coeffs, updated_layer_state = layer.apply(layer_variables, x, G_new, method=layer.update_grid, mutable=['state'])
-            
-            # Update the state and parameters for the current layer
-            updated_params[f'layers_{i}']['c_basis'] = coeffs
-            updated_state[f'layers_{i}'] = updated_layer_state['state']
+            # Update the grid for the current layer
+            layer.grid.update(x, G_new)
 
-            # Forward pass with the updated parameters to get the input for the next layer
-            layer_variables = {
-                'params': updated_params[f'layers_{i}'],
-                'state': updated_state[f'layers_{i}']
-            }
-            layer_output, _ = layer.apply(layer_variables, x)
-            if self.add_bias:
-                layer_output += self.biases[i]
-            x = layer_output
-
-        # Return a new variables dictionary to be passed to the model and optimizer
-        return {'params': updated_params, 'state': updated_state}
+            # Perform a forward pass to get the input for the next layer
+            x, _ = layer(x)
+            x += self.biases[i].value
 
     
     def __call__(self, x):
@@ -123,10 +97,7 @@ class KAN(nn.Module):
         # Pass through each layer of the KAN
         for i, layer in enumerate(self.layers):
             x, spl_reg = layer(x)
-
-            # Add a bias term
-            if self.add_bias:
-                x += self.biases[i]
+            x += self.biases[i].value
 
             # Append the regularization terms per layer in a list
             spl_regs.append(spl_reg)
