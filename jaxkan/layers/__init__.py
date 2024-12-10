@@ -1,10 +1,10 @@
 from .BaseLayer import BaseLayer
-#from .EfficientLayer import EfficientLayer
+from .SplineLayer import SplineLayer
 
 def get_layer(layer_type: str):
     layer_map = {
         "base": BaseLayer,
-        #"efficient": EfficientLayer
+        "spline": SplineLayer
     }
     
     if layer_type not in layer_map:

@@ -13,7 +13,7 @@ class KAN(nnx.Module):
         Args:
         -----
             layer_dims (List[int]): defines the network in terms of nodes. E.g. [4,5,1] is a network with 2 layers: one with n_in=4 and n_out=5 and one with n_in=5 and n_out = 1.
-            layer_type (str): type of layer to use ('base', 'efficient').
+            layer_type (str): type of layer to use (e.g., 'base').
             required_parameters (dict): dictionary containing parameters required for the chosen layer type.
             add_bias (bool): boolean that controls wether bias terms are also included during the forward pass or not.
             rngs (nnx.Rngs): random key selection for initializations wherever necessary.
@@ -32,6 +32,7 @@ class KAN(nnx.Module):
                 
         self.add_bias = add_bias
         
+        # Get the corresponding layer class based on layer_type
         LayerClass = get_layer(layer_type.lower())
             
         if required_parameters is None:
@@ -64,8 +65,9 @@ class KAN(nnx.Module):
                 
             Example Usage:
             --------------
-                model = KAN(layer_dims = [2,5,1], add_bias = True, k = 3, G = 3, grid_range = (-1,1),
-                            grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
+                req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
+                model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params,
+                            add_bias = True, rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
                 x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -102,8 +104,9 @@ class KAN(nnx.Module):
                 
             Example Usage:
             --------------
-                model = KAN(layer_dims = [2,5,1], add_bias = True, k = 3, G = 3, grid_range = (-1,1),
-                            grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
+                req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
+                model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params,
+                            add_bias = True, rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
                 x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
