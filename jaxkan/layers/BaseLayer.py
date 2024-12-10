@@ -5,9 +5,9 @@ from flax import nnx
 from ..utils.general import solve_full_lstsq
 
 
-class LayerGrid:
+class BaseGrid:
     """
-        LayerGrid class, corresponding to the grid of the Layer class. It comprises an initialization as well as an update procedure.
+        BaseGrid class, corresponding to the grid of the BaseLayer class. It comprises an initialization as well as an update procedure.
 
         Args:
         -----
@@ -20,7 +20,7 @@ class LayerGrid:
             
         Example Usage:
         --------------
-            grid_type = LayerGrid(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
+            grid_type = BaseGrid(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
             grid = grid_type.item
     """
     
@@ -75,7 +75,7 @@ class LayerGrid:
                 key = jax.random.PRNGKey(42)
                 x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
                 
-                grid = LayerGrid(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
+                grid = BaseGrid(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
                 grid.update(x=x_batch, G_new=5)
         """
 
@@ -128,9 +128,9 @@ class LayerGrid:
         self.G = G_new
         
         
-class Layer(nnx.Module):
+class BaseLayer(nnx.Module):
     """
-        Layer class. Corresponds to the original spline-based KAN Layer introduced in the original version of KAN.
+        BaseLayer class. Corresponds to the original spline-based KAN Layer introduced in the original version of KAN.
         Ref: https://arxiv.org/abs/2404.19756
 
         Args:
@@ -147,7 +147,7 @@ class Layer(nnx.Module):
             
         Example Usage:
         --------------
-            layer = Layer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
+            layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
                               grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
     """
     
@@ -170,7 +170,7 @@ class Layer(nnx.Module):
         # c_basis, c_spl, c_res: trainable parameters
 
         # Initialize the grid
-        self.grid = LayerGrid(n_in=n_in, n_out=n_out, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
+        self.grid = BaseGrid(n_in=n_in, n_out=n_out, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
 
         # Register & initialize the spline basis functions' coefficients as trainable parameters
         # They are drawn from a normal distribution with zero mean and an std of noise_std
@@ -199,7 +199,7 @@ class Layer(nnx.Module):
                 
             Example Usage:
             --------------
-                layer = Layer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
+                layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
                                   grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
@@ -244,7 +244,7 @@ class Layer(nnx.Module):
                 
             Example Usage:
             --------------
-                layer = Layer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
+                layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
                                   grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
@@ -293,7 +293,7 @@ class Layer(nnx.Module):
                 
             Example Usage:
             --------------
-                layer = Layer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
+                layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
                                   grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
