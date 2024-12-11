@@ -288,25 +288,28 @@ class SplineLayer(nnx.Module):
                 output = layer(x_batch)
         """
         
+        batch = x.shape[0]
+        
         # Calculate residual activation
         res = self.residual(x) # (batch, n_in)
+        
         # Multiply by trainable weights
         res_w = self.c_res.value # (n_out, n_in)
-        
         full_res = jnp.matmul(res, res_w.T) # (batch, n_out)
-
-        # Calculate spline basis activations
-        Bi = self.basis(x) # (batch, n_in, G+k)
-        spl = Bi.reshape(x.shape[0], -1) # (batch, n_in * (G+k))
-        # Reshaping c_basis trainable weights
-        ci = self.c_basis.value # (n_out, n_in, G+k)
-        spl_w = ci.reshape(self.n_out, -1) # (n_out, n_in * (G+k))
         
-        # Calculate spline activation
+        # Calculate spline basis
+        Bi = self.basis(x) # (batch, n_in, G+k)
+        spl = Bi.reshape(batch, -1) # (batch, n_in * (G+k))
+        
+        # Calculate spline coefficients
+        spl_w = self.c_basis.value * self.c_spl[..., None] # (n_out, n_in, G+k)
+        spl_w = spl_w.reshape(self.n_out, -1) # (n_out, n_in * (G+k))
+
         full_spl = jnp.matmul(spl, spl_w.T) # (batch, n_out)
 
         # Calculate the entire activation
         y = full_res + full_spl # (batch, n_out)
+        
         # Dividing by n_in helps convergence a lot
         y *= (1.0/self.n_in)
         

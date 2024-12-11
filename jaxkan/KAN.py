@@ -31,9 +31,10 @@ class KAN(nnx.Module):
                 ):
                 
         self.add_bias = add_bias
+        self.layer_type = layer_type.lower()
         
         # Get the corresponding layer class based on layer_type
-        LayerClass = get_layer(layer_type.lower())
+        LayerClass = get_layer(self.layer_type)
             
         if required_parameters is None:
             raise ValueError("required_parameters must be provided as a dictionary for the selected layer_type.")
