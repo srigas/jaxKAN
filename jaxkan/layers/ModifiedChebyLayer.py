@@ -7,7 +7,7 @@ from ..utils.general import solve_full_lstsq
         
 class ModifiedChebyLayer(nnx.Module):
     """
-        ModifiedChebyLayer class. Corresponds to the Modified Chebyshev version of the KANs,
+        ModifiedChebyLayer class. Corresponds to the Modified Chebyshev version of KANs,
         in that the Chebyshev polynomials are calculated recursively and not via the arccos representation.
         Ref: https://www.sciencedirect.com/science/article/pii/S0045782524005462
 
@@ -69,6 +69,9 @@ class ModifiedChebyLayer(nnx.Module):
         """
         
         batch = x.shape[0]
+        
+        # Apply tanh activation
+        x = jnp.tanh(x) # (batch, n_in)
         
         # Order 0 is set by default, since we initialize at 1
         cheby = jnp.ones((batch, self.n_in, self.k+1))
@@ -135,7 +138,7 @@ class ModifiedChebyLayer(nnx.Module):
 
             Returns:
             --------
-                y (jnp.array): output of the forward pass, corresponding to the weighted sum of the B-spline activation and the residual activation
+                y (jnp.array): output of the forward pass
                     shape (batch, n_out)
                 
             Example Usage:
@@ -150,9 +153,6 @@ class ModifiedChebyLayer(nnx.Module):
         
         batch = x.shape[0]
         
-        # Apply tanh activation
-        x = nnx.tanh(x) # (batch, n_in)
-        
         # Calculate Chebyshev basis activations
         Ti = self.basis(x) # (batch, n_in, k+1)
         cheb = Ti.reshape(batch, -1) # (batch, n_in * (k+1))
@@ -162,8 +162,5 @@ class ModifiedChebyLayer(nnx.Module):
         cheb_w = cheb_w.reshape(self.n_out, -1) # (n_out, n_in * (k+1))
 
         y = jnp.matmul(cheb, cheb_w.T) # (batch, n_out)
-        
-        # Dividing by n_in helps convergence
-        y *= (1.0/self.n_in)
         
         return y

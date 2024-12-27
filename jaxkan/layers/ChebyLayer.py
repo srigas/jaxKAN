@@ -7,7 +7,7 @@ from ..utils.general import solve_full_lstsq
         
 class ChebyLayer(nnx.Module):
     """
-        ChebyLayer class. Corresponds to the Chebyshev version of the KANs (ChebyKAN).
+        ChebyLayer class. Corresponds to the Chebyshev version of KANs (ChebyKAN).
         Ref: https://arxiv.org/pdf/2405.07200
 
         Args:
@@ -66,6 +66,9 @@ class ChebyLayer(nnx.Module):
                 
                 output = layer.basis(x_batch)
         """
+        
+        # Apply tanh activation
+        x = jnp.tanh(x) # (batch, n_in)
         
         x = jnp.expand_dims(x, axis=-1) # (batch, n_in, 1)
 
@@ -132,7 +135,7 @@ class ChebyLayer(nnx.Module):
 
             Returns:
             --------
-                y (jnp.array): output of the forward pass, corresponding to the weighted sum of the B-spline activation and the residual activation
+                y (jnp.array): output of the forward pass
                     shape (batch, n_out)
                 
             Example Usage:
@@ -147,9 +150,6 @@ class ChebyLayer(nnx.Module):
         
         batch = x.shape[0]
         
-        # Apply tanh activation
-        x = nnx.tanh(x) # (batch, n_in)
-        
         # Calculate Chebyshev basis activations
         Ti = self.basis(x) # (batch, n_in, k+1)
         cheb = Ti.reshape(batch, -1) # (batch, n_in * (k+1))
@@ -159,8 +159,5 @@ class ChebyLayer(nnx.Module):
         cheb_w = cheb_w.reshape(self.n_out, -1) # (n_out, n_in * (k+1))
 
         y = jnp.matmul(cheb, cheb_w.T) # (batch, n_out)
-        
-        # Dividing by n_in helps convergence
-        y *= (1.0/self.n_in)
         
         return y
