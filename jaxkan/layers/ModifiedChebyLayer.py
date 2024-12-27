@@ -37,7 +37,7 @@ class ModifiedChebyLayer(nnx.Module):
         # shape (n_out, n_in, k+1)
         noise_std = 1.0/(self.n_in * (self.k+1))
         self.c_basis = nnx.Param(
-            nnx.initializers.normal(noise_std)(
+            nnx.initializers.normal(stddev=noise_std)(
                 rngs.params(), (self.n_out, self.n_in, self.k + 1), jnp.float32)
         )
 

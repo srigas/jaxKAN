@@ -147,20 +147,33 @@ class BaseLayer(nnx.Module):
             grid_range (tuple): an initial range for the grid's ends, although adaptivity can completely change it.
             grid_e (float): parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
             residual (nn.Module): function that is applied on samples to calculate residual activation.
-            noise_std (float): noise for the initialization of spline coefficients.
+            base_basis (float): std coefficient for initialization of basis weights.
+            base_spline (float): std coefficient for initialization of spline weights.
+            base_res (float): std coefficient for initialization of residual weights.
+            pow_basis (float): power to raise the 1.0/n_in term for basis weights initialization. 
+            pow_spline (float): power to raise the 1.0/n_in term for spline weights initialization.
+            pow_res (float): power to raise the 1.0/n_in term for residual weights initialization.
             rngs (nnx.Rngs): random key selection for initializations wherever necessary.
             
         Example Usage:
         --------------
-            layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
-                              grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
+            layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
+                              G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+                              base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+                              pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+                              rngs = nnx.Rngs(42))
     """
     
     def __init__(self,
                  n_in: int = 2, n_out: int = 5, k: int = 3,
                  G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05,
                  residual: nnx.Module = nnx.silu,
-                 noise_std: float = 0.1,
+                 base_basis: float = 1.0,
+                 base_spline: float = 1.0,
+                 base_res: float = 1.0,
+                 pow_basis: float = 0.5,
+                 pow_spline: float = 0.5,
+                 pow_res: float = 0.5,
                  rngs: nnx.Rngs = nnx.Rngs(42)
                 ):
 
@@ -178,15 +191,25 @@ class BaseLayer(nnx.Module):
         self.grid = BaseGrid(n_in=n_in, n_out=n_out, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
 
         # Register & initialize the spline basis functions' coefficients as trainable parameters
-        # They are drawn from a normal distribution with zero mean and an std of noise_std
+        # They are drawn from a normal distribution with zero mean and an std of basis_std
+        basis_std = base_basis/(self.n_in**pow_basis)
         self.c_basis = nnx.Param(
-            nnx.initializers.normal(stddev=noise_std)(
+            nnx.initializers.normal(stddev=basis_std)(
                 rngs.params(), (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32)
         )
 
         # Register the factors of spline and residual activations as parameters
-        self.c_spl = nnx.Param(jnp.ones(self.n_in * self.n_out))
-        self.c_res = nnx.Param(jnp.ones(self.n_in * self.n_out))
+        spline_std = base_spline/(self.n_in**pow_spline)
+        self.c_spl = nnx.Param(
+        nnx.initializers.normal(stddev=spline_std)(
+                rngs.params(), (self.n_out, self.n_in), jnp.float32)
+        )
+        
+        res_std = base_res/(self.n_in**pow_res)
+        self.c_res = nnx.Param(
+        nnx.initializers.normal(stddev=res_std)(
+                rngs.params(), (self.n_out, self.n_in), jnp.float32)
+        )
 
     def basis(self, x):
         """
@@ -204,8 +227,11 @@ class BaseLayer(nnx.Module):
                 
             Example Usage:
             --------------
-                layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
-                                  grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
+                layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
+                                  G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+                                  base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+                                  pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+                                  rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
                 x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -249,8 +275,11 @@ class BaseLayer(nnx.Module):
                 
             Example Usage:
             --------------
-                layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
-                                  grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
+                layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
+                                  G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+                                  base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+                                  pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+                                  rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
                 x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -298,8 +327,11 @@ class BaseLayer(nnx.Module):
                 
             Example Usage:
             --------------
-                layer = BaseLayer(n_in = 2, n_out = 5, k = 3, G = 3, grid_range = (-1,1),
-                                  grid_e = 0.05, residual = nnx.silu, noise_std = 0.1, rngs = nnx.Rngs(42))
+                layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
+                                  G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+                                  base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+                                  pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+                                  rngs = nnx.Rngs(42))
                               
                 key = jax.random.PRNGKey(42)
                 x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -328,9 +360,8 @@ class BaseLayer(nnx.Module):
         cnst_spl = jnp.expand_dims(self.c_spl.value, axis=0)
         cnst_res = jnp.expand_dims(self.c_res.value, axis=0)
         y = (cnst_spl * spl) + (cnst_res * res) # (batch, n_in*n_out)
+        
         # Reshape and sum to cast to (batch, n_out) shape
         y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
-        # Dividing by n_in helps convergence a lot
-        y = (1.0/self.n_in)*jnp.sum(y_reshaped, axis=2)
         
         return y
