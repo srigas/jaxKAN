@@ -356,12 +356,15 @@ class BaseLayer(nnx.Module):
         # Transpose to shape (batch, n_in*n_out)
         spl = jnp.transpose(spl, (1,0))
 
+        # Reshape constants to (1, n_in*n_out)
+        cnst_spl = jnp.expand_dims(self.c_spl.value, axis=0).reshape((1, self.n_in * self.n_out))
+        cnst_res = jnp.expand_dims(self.c_res.value, axis=0).reshape((1, self.n_in * self.n_out))
+        
         # Calculate the entire activation
-        cnst_spl = jnp.expand_dims(self.c_spl.value, axis=0)
-        cnst_res = jnp.expand_dims(self.c_res.value, axis=0)
         y = (cnst_spl * spl) + (cnst_res * res) # (batch, n_in*n_out)
         
         # Reshape and sum to cast to (batch, n_out) shape
         y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
+        y = jnp.sum(y_reshaped, axis=2)
         
         return y

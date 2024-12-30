@@ -1,6 +1,5 @@
 import jax
 import jax.numpy as jnp
-from jax import vmap
 
 import optax
 from flax import linen as nn
@@ -9,88 +8,6 @@ from scipy.stats.qmc import Sobol
 import numpy as np
 
 import time
-
-
-def interpolate_moments(mu_old, nu_old, new_shape):
-    '''
-        Performs a linear interpolation to assign values to the first and second-order moments of gradients
-        of the c_i basis functions coefficients after grid extension
-        Note:
-            num_basis = G+k for splines and G+1 for R basis functions
-            new_num_basis = G'+k for splines and G'+1 for R basis functions
-        
-        Args:
-        -----
-            mu_old (jnp.array): first-order moments before extension
-                shape (n_in*n_out, num_basis)
-            nu_old (jnp.array): second-order moments before extension
-                shape (n_in*n_out, num_basis)
-            new shape (tuple): (n_in*n_out, new_num_basis)
-        
-        Returns:
-        --------
-            mu_new (jnp.array): first-order moments after extension
-                shape (n_in*n_out, new_num_basis)
-            nu_new (jnp.array): second-order moments after extension
-                shape (n_in*n_out, new_num_basis)
-    '''
-    old_shape = mu_old.shape
-    size = old_shape[0]
-    old_j = old_shape[1]
-    new_j = new_shape[1]
-    
-    # Create new indices for the second dimension
-    old_indices = jnp.linspace(0, old_j - 1, old_j)
-    new_indices = jnp.linspace(0, old_j - 1, new_j)
-
-    # Vectorize the interpolation function for use with vmap
-    interpolate_fn = lambda old_row: jnp.interp(new_indices, old_indices, old_row)
-
-    # Apply the interpolation function to each row using vmap
-    mu_new = vmap(interpolate_fn)(mu_old)
-    nu_new = vmap(interpolate_fn)(nu_old)
-    
-    return mu_new, nu_new
-
-
-@jax.jit
-def state_transition(old_state, variables):
-    '''
-        Performs the state transition for the optimizer after grid extension
-        
-        Args:
-        -----
-            old_state (tuple): collection of adam state and scheduler state before extension
-            variables (dict): variables dict of KAN model
-        
-        Returns:
-        --------
-            new_state (tuple): collection of adam state and scheduler state after extension
-    '''
-    # Copy old state
-    adam_count = old_state[0].count
-    #adam_count = jnp.array(0, dtype=jnp.int32)
-    adam_mu, adam_nu = old_state[0].mu, old_state[0].nu
-
-    # Get all layer-related keys, so that we do not touch the other parameters
-    layer_keys = {k for k in adam_mu.keys() if k.startswith('layers_')}
-
-    for key in layer_keys:
-        # Find the c_basis shape for this layer
-        c_shape = variables['params'][key]['c_basis'].shape
-        # Get new mu and nu
-        mu_new, nu_new = interpolate_moments(adam_mu[key]['c_basis'], adam_nu[key]['c_basis'], c_shape)
-        # Set them
-        adam_mu[key]['c_basis'], adam_nu[key]['c_basis'] = mu_new, nu_new
-
-    # Make new adam state
-    adam_state = optax.ScaleByAdamState(adam_count, adam_mu, adam_nu)
-    # Make new scheduler state
-    extra_state = optax.ScaleByScheduleState(adam_count)
-    # Make new total state
-    new_state = (adam_state, extra_state)
-
-    return new_state
 
 
 def sobol_sample(X0, X1, N, seed=42):
