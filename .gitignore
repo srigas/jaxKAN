@@ -4,3 +4,4 @@ __pycache__/
 tests/
 .python-version
 pyproject.toml
+uv.lock
