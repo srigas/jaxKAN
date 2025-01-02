@@ -10,6 +10,7 @@ setup(
         'flax==0.8.3',
         'jax[cpu]==0.4.28',
         'optax==0.2.2',
+        'pytest==8.3.4',
     ],
     extras_require={
         'gpu': ['jax[cuda12]'],
