@@ -2,3 +2,6 @@ env/
 .ipynb_checkpoints/
 __pycache__/
 runs/
+.python-version
+pyproject.toml
+uv.lock
