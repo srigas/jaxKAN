@@ -9,6 +9,7 @@ import numpy as np
 
 from .general import adam_transition
 
+
 def sobol_sample(X0, X1, N, seed=42):
     """
         Performs Sobol sampling
