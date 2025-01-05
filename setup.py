@@ -2,18 +2,25 @@ from setuptools import setup, find_packages
 
 setup(
     name='jaxkan',
-    version='0.1.8',
+    version='1.1.0',
     packages=find_packages(),
     install_requires=[
-        'scipy==1.13.1',
-        'numpy==1.26.4',
-        'flax==0.8.3',
-        'jax[cpu]==0.4.28',
-        'optax==0.2.2',
-        'pytest==8.3.4',
+        'numpy==2.1.3',
+        'scipy==1.14.1',
+        'jax[cpu]==0.4.35',
+        'optax==0.2.4',
+        'flax==0.10.2',
     ],
     extras_require={
-        'gpu': ['jax[cuda12]'],
+        'gpu': [
+            'jax[cuda12]==0.4.35',
+        ],
+        'all': [
+            'pytest==8.3.4',
+            'jupyterlab==4.3.0',
+            'matplotlib==3.9.2',
+            'scikit-learn==1.5.2',
+        ]
     },
     author='Spyros Rigas, Michalis Papachristou',
     author_email='rigassp@gmail.com',
@@ -26,5 +33,5 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.10',
 )
