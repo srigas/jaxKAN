@@ -12,10 +12,11 @@ project = 'jaxkan'
 copyright = '2024-2025, Spyros Rigas, Michalis Papachristou'
 author = 'Spyros Rigas, Michalis Papachristou'
 
-# The full version, including alpha/beta/rc tags
-release = '0.1.9'
+release = '0.1.12'
 
 # -- General configuration ------------------------------------------------
+
+root_doc = "index"
 
 exclude_patterns = []
 
@@ -38,9 +39,8 @@ extensions = [
 
 language = 'en'
 
-templates_path = ['_templates']
+autosectionlabel_prefix_document = True
 
 # -- Options for HTML output ----------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static']
