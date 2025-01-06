@@ -8,7 +8,6 @@ name = "jaxkan"
 version = "0.1.9"
 description = "A JAX implementation of Kolmogorov-Arnold Networks"
 readme = "README.md"
-readme-content-type = "text/markdown"
 keywords = ["JAX", "NNX", "KANs", "Kolmogorov-Arnold", "PIKAN"]
 
 authors = [
