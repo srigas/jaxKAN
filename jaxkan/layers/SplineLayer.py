@@ -7,23 +7,41 @@ from ..utils.general import solve_full_lstsq
 
 class SplineGrid:
     """
-        SplineGrid class, corresponding to the grid of the SplineLayer class. It comprises an initialization as well as an update procedure.
+    SplineGrid class, corresponding to the grid of the SplineLayer class. It comprises an initialization as well as an update procedure.
 
-        Args:
-        -----
-            n_nodes (int): number of layer nodes
-            k (int): order of the spline basis functions.
-            G (int): number of grid intervals.
-            grid_range (tuple): an initial range for the grid's ends, although adaptivity can completely change it.
-            grid_e (float): parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
-            
-        Example Usage:
-        --------------
-            grid_type = SplineGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
-            grid = grid_type.item
+    Attributes:
+        n_nodes (int):
+                Number of layer nodes.
+        k (int):
+            Order of the spline basis functions.
+        G (int):
+            Number of grid intervals.
+        grid_range (tuple):
+            An initial range for the grid's ends, although adaptivity can completely change it.
+        grid_e (float):
+            Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
     """
     
     def __init__(self, n_nodes: int = 2, k: int = 3, G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05):
+        """
+        Initializes a SplineGrid instance.
+        
+        Args:
+            n_nodes (int):
+                Number of layer nodes.
+            k (int):
+                Order of the spline basis functions.
+            G (int):
+                Number of grid intervals.
+            grid_range (tuple):
+                An initial range for the grid's ends, although adaptivity can completely change it.
+            grid_e (float):
+                Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
+            
+        Example:
+            >>> grid_type = SplineGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
+            >>> grid = grid_type.item
+        """
                 
         self.n_nodes = n_nodes
         self.k = k
@@ -36,16 +54,15 @@ class SplineGrid:
 
     def _initialize(self):
         """
-            Create and initialize the grid. Can also be used to reset a grid to the default value.
+        Create and initialize the grid. Can also be used to reset a grid to the default value.
 
-            Returns:
-            --------
-                grid (jnp.array): grid for the KAN layer
-                    shape (n_nodes, G + 2k + 1)
-            
-            Example Usage:
-            --------------
-                grid.item = grid._initialize()
+        Returns:
+            grid (jnp.array):
+                Grid for the SplineLayer, shape (n_nodes, G + 2k + 1).
+        
+        Example:
+            >>> grid = BaseGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
+            >>> grid.item = grid._initialize()
         """
         
         # Calculate the step size for the knot vector based on its end values
@@ -62,20 +79,20 @@ class SplineGrid:
 
     def update(self, x, G_new):
         """
-            Update the grid based on input data and new grid size.
+        Update the grid based on input data and new grid size.
 
-            Args:
-            -----
-                x (jnp.ndarray): Input data of shape (batch, n_in).
-                G_new (int): New grid size in terms of intervals.
-                
-            Example Usage:
-            --------------
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                grid_type = SplineGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
-                grid.update(x=x_batch, G_new=5)
+        Args:
+            x (jnp.ndarray):
+                Input data, shape (batch, n_nodes).
+            G_new (int):
+                New grid size in terms of intervals.
+            
+        Example:
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> grid = SplineGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
+            >>> grid.update(x=x_batch, G_new=5)
         """
 
         batch = x.shape[0]
@@ -126,33 +143,37 @@ class SplineGrid:
         
 class SplineLayer(nnx.Module):
     """
-        SplineLayer class. Corresponds to the "efficient" version of the spline-based KAN Layer.
-        Ref: https://github.com/Blealtan/efficient-kan
+    SplineLayer class. Corresponds to the "efficient" version of the spline-based KAN Layer. Ref: https://github.com/Blealtan/efficient-kan
 
-        Args:
-        -----
-            n_in (int): number of layer's incoming nodes.
-            n_out (int): number of layer's outgoing nodes.
-            k (int): order of the spline basis functions.
-            G (int): number of grid intervals.
-            grid_range (tuple): an initial range for the grid's ends, although adaptivity can completely change it.
-            grid_e (float): parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
-            residual (nn.Module): function that is applied on samples to calculate residual activation.
-            base_basis (float): std coefficient for initialization of basis weights.
-            base_spline (float): std coefficient for initialization of spline weights.
-            base_res (float): std coefficient for initialization of residual weights.
-            pow_basis (float): power to raise the 1.0/n_in term for basis weights initialization. 
-            pow_spline (float): power to raise the 1.0/n_in term for spline weights initialization.
-            pow_res (float): power to raise the 1.0/n_in term for residual weights initialization.
-            rngs (nnx.Rngs): random key selection for initializations wherever necessary.
-            
-        Example Usage:
-        --------------
-            layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
-                                G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-                                base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-                                pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5,
-                                rngs = nnx.Rngs(42))
+    Attributes:
+        n_in (int):
+            Number of layer's incoming nodes.
+        n_out (int):
+            Number of layer's outgoing nodes.
+        k (int):
+            Order of the spline basis functions.
+        G (int):
+            Number of grid intervals.
+        grid_range (tuple):
+            An initial range for the grid's ends, although adaptivity can completely change it.
+        grid_e (float):
+            Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
+        residual (nn.Module):
+            Function that is applied on samples to calculate residual activation.
+        base_basis (float):
+            std coefficient for initialization of basis weights.
+        base_spline (float):
+            std coefficient for initialization of spline weights.
+        base_res (float):
+            std coefficient for initialization of residual weights.
+        pow_basis (float):
+            Power to raise the 1.0/n_in term for basis weights initialization. 
+        pow_spline (float):
+            Power to raise the 1.0/n_in term for spline weights initialization.
+        pow_res (float):
+            Power to raise the 1.0/n_in term for residual weights initialization.
+        rngs (nnx.Rngs):
+            Random key selection for initializations wherever necessary.
     """
     
     def __init__(self,
@@ -167,6 +188,46 @@ class SplineLayer(nnx.Module):
                  pow_res: float = 0.5,
                  rngs: nnx.Rngs = nnx.Rngs(42)
                 ):
+        """
+        Initializes a BaseLayer instance.
+
+        Args:
+            n_in (int):
+                Number of layer's incoming nodes.
+            n_out (int):
+                Number of layer's outgoing nodes.
+            k (int):
+                Order of the spline basis functions.
+            G (int):
+                Number of grid intervals.
+            grid_range (tuple):
+                An initial range for the grid's ends, although adaptivity can completely change it.
+            grid_e (float):
+                Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
+            residual (nn.Module):
+                Function that is applied on samples to calculate residual activation.
+            base_basis (float):
+                std coefficient for initialization of basis weights.
+            base_spline (float):
+                std coefficient for initialization of spline weights.
+            base_res (float):
+                std coefficient for initialization of residual weights.
+            pow_basis (float):
+                Power to raise the 1.0/n_in term for basis weights initialization. 
+            pow_spline (float):
+                Power to raise the 1.0/n_in term for spline weights initialization.
+            pow_res (float):
+                Power to raise the 1.0/n_in term for residual weights initialization.
+            rngs (nnx.Rngs):
+                Random key selection for initializations wherever necessary.
+            
+        Example:
+            >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
+            >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     rngs = nnx.Rngs(42))
+        """
 
         # Setup basic parameters
         self.n_in = n_in
@@ -205,30 +266,27 @@ class SplineLayer(nnx.Module):
 
     def basis(self, x):
         """
-            Uses k and the current grid to calculate the values of spline basis functions on the input.
+        Uses k and the current grid to calculate the values of spline basis functions on the input.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
 
-            Returns:
-            --------
-                basis_splines (jnp.array): spline basis functions applied on inputs
-                    shape (batch, n_in, G+k)
-                
-            Example Usage:
-            --------------
-                layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
-                                    G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-                                    base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-                                    pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5,
-                                    rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                output = layer.basis(x_batch)
+        Returns:
+            basis_splines (jnp.array):
+                Spline basis functions applied on inputs, shape (n_in*n_out, G+k, batch).
+            
+        Example:
+            >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
+            >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> output = layer.basis(x_batch)
         """
         
         grid = self.grid.item # shape (n_in, G+2k+1)
@@ -249,27 +307,25 @@ class SplineLayer(nnx.Module):
 
     def update_grid(self, x, G_new):
         """
-            Performs a grid update given a new value for G (i.e., G_new) and adapts it to the given data, x.
-            Additionally, re-initializes the c_basis parameters to a better estimate, based on the new grid.
+        Performs a grid update given a new value for G (i.e., G_new) and adapts it to the given data, x. Additionally, re-initializes the c_basis parameters to a better estimate, based on the new grid.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
-                G_new (int): Size of the new grid (in terms of intervals)
-                
-            Example Usage:
-            --------------
-                layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
-                                    G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-                                    base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-                                    pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5,
-                                    rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                layer.update_grid(x=x_batch, G_new=5)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
+            G_new (int):
+                Size of the new grid (in terms of intervals).
+            
+        Example:
+            >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
+            >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> layer.update_grid(x=x_batch, G_new=5)
         """
 
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
@@ -294,30 +350,27 @@ class SplineLayer(nnx.Module):
 
     def __call__(self, x):
         """
-            The layer's forward pass.
+        The layer's forward pass.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
 
-            Returns:
-            --------
-                y (jnp.array): output of the forward pass, corresponding to the weighted sum of the B-spline activation and the residual activation
-                    shape (batch, n_out)
-                
-            Example Usage:
-            --------------
-                layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
-                                    G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-                                    base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-                                    pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5,
-                                    rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                output = layer(x_batch)
+        Returns:
+            y (jnp.array):
+                Output of the forward pass, corresponding to the weighted sum of the B-spline activation and the residual activation, shape (batch, n_out).
+            
+        Example:
+            >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
+            >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
+            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
+            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> output = layer(x_batch)
         """
         
         batch = x.shape[0]

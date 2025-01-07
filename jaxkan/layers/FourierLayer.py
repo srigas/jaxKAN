@@ -7,25 +7,42 @@ from ..utils.general import solve_full_lstsq
         
 class FourierLayer(nnx.Module):
     """
-        FourierLayer class. Corresponds to the Fourier-based version of KANs (FourierKAN).
-        Ref: https://github.com/GistNoesis/FourierKAN
+    FourierLayer class. Corresponds to the Fourier-based version of KANs (FourierKAN). Ref: https://github.com/GistNoesis/FourierKAN
 
-        Args:
-        -----
-            n_in (int): number of layer's incoming nodes.
-            n_out (int): number of layer's outgoing nodes.
-            k (int): degree of Chebyshev polynomial (1st kind).
-            smooth_init (bool): whether to initialize Fourier coefficients with smoothening.
-            rngs (nnx.Rngs): random key selection for initializations wherever necessary.
-            
-        Example Usage:
-        --------------
-            layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+    Attributes:
+        n_in (int):
+            Number of layer's incoming nodes.
+        n_out (int):
+            Number of layer's outgoing nodes.
+        k (int):
+            Degree of Chebyshev polynomial (1st kind).
+        smooth_init (bool):
+            Whether to initialize Fourier coefficients with smoothening.
+        rngs (nnx.Rngs):
+            Random key selection for initializations wherever necessary.
     """
     
     def __init__(self,
                  n_in: int = 2, n_out: int = 5, k: int = 5, smooth_init: bool = True, rngs: nnx.Rngs = nnx.Rngs(42)
                 ):
+        """
+        Initializes a FourierLayer instance.
+        
+        Args:
+            n_in (int):
+                Number of layer's incoming nodes.
+            n_out (int):
+                Number of layer's outgoing nodes.
+            k (int):
+                Degree of Chebyshev polynomial (1st kind).
+            smooth_init (bool):
+                Whether to initialize Fourier coefficients with smoothening.
+            rngs (nnx.Rngs):
+                Random key selection for initializations wherever necessary.
+            
+        Example:
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+        """
 
         # Setup basic parameters
         self.n_in = n_in
@@ -51,29 +68,25 @@ class FourierLayer(nnx.Module):
 
     def basis(self, x):
         """
-            Calculate the con/sin activations on the input x.
+        Calculates the con/sin activations on the input x.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
 
-            Returns:
-            --------
-                c (jnp.array): Cosines applied on inputs
-                    shape (batch, n_in, k)
-                s (jnp.array): Sines applied on inputs
-                    shape (batch, n_in, k)
-                
-            Example Usage:
-            --------------
-                layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                output_1, output_2 = layer.basis(x_batch)
+        Returns:
+            c, s (tuple):
+                Cosines, sines applied on inputs, shape (batch, n_in, k).
+            
+        Example:
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> output_1, output_2 = layer.basis(x_batch)
         """
+        
         # Expand x to an extra dim for broadcasting
         x = jnp.expand_dims(x, axis=-1) # (batch, n_in, 1)
     
@@ -89,23 +102,21 @@ class FourierLayer(nnx.Module):
 
     def update_grid(self, x, k_new):
         """
-            For the case of FourierKAN there is no concept of grid. However, a fine-graining approach
-            can be followed by progressively increasing the number of summands.
+        For the case of FourierKAN there is no concept of grid. However, a fine-graining approach can be followed by progressively increasing the number of summands.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
-                k_new (int): new value for the fourier sum's order
-                
-            Example Usage:
-            --------------
-                layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                layer.update_grid(x=x_batch, k_new=7)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
+            k_new (int):
+                New value for the fourier sum's order.
+            
+        Example:
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> layer.update_grid(x=x_batch, k_new=7)
         """
 
         # Apply the inputs to the current "grid" to acquire the cosine and sine terms
@@ -140,26 +151,23 @@ class FourierLayer(nnx.Module):
 
     def __call__(self, x):
         """
-            The layer's forward pass.
+        The layer's forward pass.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
 
-            Returns:
-            --------
-                y (jnp.array): output of the forward pass
-                    shape (batch, n_out)
-                
-            Example Usage:
-            --------------
-                layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                output = layer(x_batch)
+        Returns:
+            y (jnp.array):
+                Output of the forward pass, shape (batch, n_out).
+            
+        Example:
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> output = layer(x_batch)
         """
         
         batch = x.shape[0]

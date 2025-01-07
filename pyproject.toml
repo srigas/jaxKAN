@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jaxkan"
-version = "0.1.9"
+version = "0.2.0"
 description = "A JAX implementation of Kolmogorov-Arnold Networks"
 readme = "README.md"
 keywords = ["JAX", "NNX", "KANs", "Kolmogorov-Arnold", "PIKAN"]
@@ -59,6 +59,7 @@ doc = [
     "sphinx-autodoc-typehints",
     "nbsphinx",
     "nbsphinx-link",
+	"pandoc",
 ]
 
 

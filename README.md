@@ -1,27 +1,21 @@
+[![Doc](https://img.shields.io/badge/docs-dev-blue.svg)](https://jaxkan.readthedocs.io/)
+[![License](https://img.shields.io/github/license/srigas/jaxkan)](https://github.com/srigas/jaxKAN/blob/main/LICENSE)
+[![Run Tests](https://github.com/srigas/jaxKAN/actions/workflows/test.yml/badge.svg)](https://github.com/srigas/jaxKAN/actions/workflows/test.yml)
+[![PyPI version](https://img.shields.io/pypi/v/jaxkan.svg)](https://pypi.org/project/jaxkan/)
+
 # jaxKAN
 
-A JAX implementation of the original Kolmogorov-Arnold Networks (KANs), using the Flax and Optax frameworks for neural networks and optimization, respectively. Our adaptation is based on the original [pykan](https://github.com/KindXiaoming/pykan), however we also included a built-in grid extension routine, which does not simply perform an adaptation of the grid based on the inputs, but also extends its size.
+jaxKAN is a Python package designed to enable the training of Kolmogorov-Arnold Networks (KANs) using the JAX framework. Built on Flax's NNX module, jaxKAN provides a collection of KAN layers that serve as foundational building blocks for various KAN architectures, such as the EfficientKAN and the ChebyKAN. While it includes standard features like initialization and forward pass methods, the KAN class in jaxKAN introduces an `extend_grids` method, which facilitates the extension of the grids for all layers in the network, irrespective of how those grids are defined. For instance, in the case of ChebyKAN, where a traditional grid concept doesn't exist, the method extends the order of the Chebyshev polynomials utilized in the model.
 
 
-## Installation
+## Documentation
 
-`jaxKAN` is available as a PyPI package. For installation, simply run
-
-```
-pip3 install jaxkan
-```
-
-The default installation requires `jax[cpu]`, but there is also a `gpu` version which will install `jax[cuda12]` as a dependency.
-
-
-## Why not more efficient?
-
-Despite their overall potential in the Deep Learning field, the authors of KANs emphasized their performance when it comes to scientific computing, in tasks such as Symbolic Regression or solving PDEs. This is why we put emphasis on preserving their original form, albeit less computationally efficient, as it allows the user to utilize the full regularization terms presented in the [arXiv pre-print](https://arxiv.org/abs/2404.19756) and not the "mock" regularization terms presented, for instance, in the [efficient-kan](https://github.com/Blealtan/efficient-kan/tree/master) implementation.
+Extensive documentation on jaxKAN, including installation & contributing guidelines, API reference and tutorials, can be found [here](https://jaxkan.readthedocs.io/).
 
 
 ## Citation
 
-If you utilized `jaxKAN` for your own academic work, please consider using the following citation, which is the paper introducing the framework:
+There is a JOSS paper currently submitted under review for jaxKAN. Until it is published, if you utilized `jaxKAN` for your own academic work, please consider using the following citation, which is the paper in which the framework was first introduced for PIKANs:
 
 ```
 @article{10763509,

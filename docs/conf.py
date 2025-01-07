@@ -4,7 +4,7 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../..'))
 
 # -- Project information -----------------------------------------------------
 
@@ -12,11 +12,13 @@ project = 'jaxkan'
 copyright = '2024-2025, Spyros Rigas, Michalis Papachristou'
 author = 'Spyros Rigas, Michalis Papachristou'
 
-release = '0.1.12'
+release = '0.2.0'
 
 # -- General configuration ------------------------------------------------
 
 root_doc = "index"
+
+language = 'en'
 
 exclude_patterns = []
 
@@ -37,8 +39,8 @@ extensions = [
     "nbsphinx_link"
 ]
 
-language = 'en'
-
+autosummary_generate = True
+autodoc_member_order = "bysource"
 autosectionlabel_prefix_document = True
 
 # -- Options for HTML output ----------------------------------------------

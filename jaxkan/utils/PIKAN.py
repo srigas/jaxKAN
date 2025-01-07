@@ -12,25 +12,24 @@ from .general import adam_transition
 
 def sobol_sample(X0, X1, N, seed=42):
     """
-        Performs Sobol sampling
-        
-        Args:
-        -----
-            X0 (np.ndarray): lower end of sampling region
-                shape (dims,)
-            X1 (np.ndarray): upper end of sampling region
-                shape (dims,)
-            N (int): number of points to sample
-            seed (int): seed for reproducibility
-        
-        Returns:
-        --------
-            points (np.ndarray): sampled points
-                shape (N,dims)
-                
-        Example Usage:
-        --------------
-            data = sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42)
+    Performs Sobol sampling.
+    
+    Args:
+        X0 (np.ndarray):
+            Lower end of sampling region.
+        X1 (np.ndarray):
+            Upper end of sampling region.
+        N (int):
+            Number of points to sample.
+        seed (int):
+            Seed for reproducibility.
+    
+    Returns:
+        points (np.ndarray):
+            Sampled points, shape (N, X0.shape[0])
+            
+    Example:
+        >>> data = sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42)
     """
     dims = X0.shape[0]
     sobol_sampler = Sobol(dims, scramble=True, seed=seed)
@@ -42,28 +41,29 @@ def sobol_sample(X0, X1, N, seed=42):
 
 def gradf(f, idx, order=1):
     """
-        Computes gradients of arbitrary order
-        
-        Args:
-        -----
-            f (function): function to be differentiated
-            idx (int): index of coordinate to differentiate
-            order (int): gradient order
-        
-        Returns:
-        --------
-            g (function): gradient of f
-                
-        Example Usage:
-        --------------
-            model = KAN([2,6,1], 'spline', {}, True)
+    Computes gradients of arbitrary order/argument.
+    
+    Args:
+        f (function):
+            Function to be differentiated.
+        idx (int):
+            Index of coordinate to differentiate.
+        order (int):
+            Gradient order.
+    
+    Returns:
+        g (function):
+            Gradient of f with respect to "idx" and order "order".
             
-            def u(x):
-                y = model(x)
-                return y
-                
-            u_t = gradf(u, 0, 1) # 1st-order gradient w.r.t. first model feature
-            u_xx = gradf(u, 1, 2) # 2nd-order gradient w.r.t. second model feature
+    Example:
+        >>> model = KAN([2,6,1], 'spline', {}, True)
+        >>>
+        >>> def u(x):
+        >>>    y = model(x)
+        >>>    return y
+        >>>
+        >>> u_t = gradf(u, 0, 1) # 1st-order gradient w.r.t. first model feature
+        >>> u_xx = gradf(u, 1, 2) # 2nd-order gradient w.r.t. second model feature
     """
     def grad_fn(g, idx):
         return lambda tx: jax.grad(lambda tx: jnp.sum(g(tx)))(tx)[..., idx].reshape(-1,1)
@@ -78,52 +78,58 @@ def gradf(f, idx, order=1):
 
 def get_vanilla_loss(pde_loss, model):
     """
-        Wrapper that returns the loss function for a vanilla PIKAN
-        
-        Args:
-        -----
-            pde_loss (function): loss function corresponding to the PDE
-            model (jaxkan.KAN.KAN): jaxKAN KAN model
-        
-        Returns:
-        --------
-            vanilla_loss_fn (function): loss function for the PIKAN
-                
-        Example Usage:
-        --------------
-            collocs = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42))
-            model = KAN([2,8,1], 'cheby', {'k' : 5}, True)
+    Wrapper that returns the vanilla loss function for a PIKAN.
+    
+    Args:
+        pde_loss (function):
+            Loss function corresponding to the PDE.
+        model (jaxkan.KAN.KAN):
+            jaxKAN KAN model instance.
+    
+    Returns:
+        vanilla_loss_fn (function):
+            Full vanilla loss function for the PIKAN.
             
-            def pde_loss(model, collocs):
-                def u(x):
-                    y = model(x)
-                    return y
-                    
-                u_t = gradf(u, 0, 1)
-                u_xx = gradf(u, 1, 2)
-                
-                return u_t(collocs) - 0.001*u_xx(collocs) - 5*(u(collocs)-(u(collocs)**3))
-                
-            loss_fn = get_vanilla_loss(pde_loss, model)
+    Example:
+        >>> collocs = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42))
+        >>> model = KAN([2,8,1], 'cheby', {'k' : 5}, True)
+        >>>
+        >>> def pde_loss(model, collocs):
+        >>>     def u(x):
+        >>>         y = model(x)
+        >>>         return y
+        >>>
+        >>>     u_t = gradf(u, 0, 1)
+        >>>     u_xx = gradf(u, 1, 2)
+        >>>
+        >>>     return u_t(collocs) - 0.001*u_xx(collocs) - 5*(u(collocs)-(u(collocs)**3))
+        >>>
+        >>> loss_fn = get_vanilla_loss(pde_loss, model)
     """
     
     def vanilla_loss_fn(model, collocs, bc_collocs, bc_data, glob_w, loc_w):
         """
-            Loss function for a vanilla PIKAN
+        Full vanilla loss function for a PIKAN.
+        
+        Args:
+            model (jaxkan.KAN.KAN):
+                jaxKAN KAN model instance.
+            collocs (jnp.array):
+                Collocation points for the PDE loss.
+            bc_collocs (List[jnp.array]):
+                List of collocation points for the boundary losses.
+            bc_data (List[jnp.array]):
+                List of data corresponding to bc_collocs.
+            glob_w (List[jnp.array]):
+                Global weights for each loss function's term.
+            loc_w (NoneType):
+                Placeholder to ensure a uniform train_step() between vanilla and adaptive loss functions.
             
-            Args:
-            -----
-                model (jaxkan.KAN.KAN): jaxKAN KAN model
-                collocs (jnp.array): collocation points for the PDE loss
-                bc_collocs (List[jnp.array]): list of collocation points for the boundary losses
-                bc_data (List[jnp.array]): list of data corresponding to bc_collocs
-                glob_w (List[jnp.array]): global weights for each loss function's term
-                loc_w (NoneType): placeholder to ensure a uniform train_step()
-                
-            Returns:
-            --------
-                total_loss (float): the loss function's value
-                None (NoneType): placeholder to ensure a uniform train_step()
+        Returns:
+            total_loss (float):
+                The total loss function's value.
+            None (NoneType):
+                Placeholder to ensure a uniform train_step() between vanilla and adaptive loss functions.
         """
         # Calculate PDE loss
         pde_res = pde_loss(model, collocs)
@@ -143,52 +149,58 @@ def get_vanilla_loss(pde_loss, model):
 
 def get_adaptive_loss(pde_loss, model):
     """
-        Wrapper that returns the loss function for an adaptive PIKAN
-        
-        Args:
-        -----
-            pde_loss (function): loss function corresponding to the PDE
-            model: model from the models module
-        
-        Returns:
-        --------
-            adaptive_loss_fn (function): loss function for the PIKAN
-                
-        Example Usage:
-        --------------
-            collocs = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42))
-            model = KAN([2,8,1], 'cheby', {'k' : 5}, True)
+    Wrapper that returns the adaptive loss function for a PIKAN.
+    
+    Args:
+        pde_loss (function):
+            Loss function corresponding to the PDE.
+        model (jaxkan.KAN.KAN):
+            jaxKAN KAN model instance.
+    
+    Returns:
+        adaptive_loss_fn (function):
+            Full adaptive loss function for the PIKAN.
             
-            def pde_loss(model, collocs):
-                def u(x):
-                    y = model(x)
-                    return y
-                    
-                u_t = gradf(u, 0, 1)
-                u_xx = gradf(u, 1, 2)
-                
-                return u_t(collocs) - 0.001*u_xx(collocs) - 5*(u(collocs)-(u(collocs)**3))
-                
-            loss_fn = get_adaptive_loss(pde_loss, model)
+    Example:
+        >>> collocs = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42))
+        >>> model = KAN([2,8,1], 'cheby', {'k' : 5}, True)
+        >>>
+        >>> def pde_loss(model, collocs):
+        >>>     def u(x):
+        >>>         y = model(x)
+        >>>         return y
+        >>>
+        >>>     u_t = gradf(u, 0, 1)
+        >>>     u_xx = gradf(u, 1, 2)
+        >>>
+        >>>     return u_t(collocs) - 0.001*u_xx(collocs) - 5*(u(collocs)-(u(collocs)**3))
+        >>>
+        >>> loss_fn = get_adaptive_loss(pde_loss, model)
     """
     
     def adaptive_loss_fn(model, collocs, bc_collocs, bc_data, glob_w, loc_w):
         """
-            Loss function for an adaptive PIKAN
+        Full adaptive loss function for a PIKAN.
+        
+        Args:
+            model (jaxkan.KAN.KAN):
+                jaxKAN KAN model instance.
+            collocs (jnp.array):
+                Collocation points for the PDE loss.
+            bc_collocs (List[jnp.array]):
+                List of collocation points for the boundary losses.
+            bc_data (List[jnp.array]):
+                List of data corresponding to bc_collocs.
+            glob_w (List[jnp.array]):
+                Global weights for each loss function's term.
+            loc_w (List[jnp.array]):
+                Local RBA weights for each loss function's term.
             
-            Args:
-            -----
-                model (jaxkan.KAN.KAN): jaxKAN type model
-                collocs (jnp.array): collocation points for the PDE loss
-                bc_collocs (List[jnp.array]): list of collocation points for the boundary losses
-                bc_data (List[jnp.array]): list of data corresponding to bc_collocs
-                glob_w (List[jnp.array]): global weights for each loss function's term
-                loc_w (List[jnp.array]): local RBA weights for each loss function's term
-                
-            Returns:
-            --------
-                total_loss (float): the loss function's value
-                loc_w (List[jnp.array]): updated RBA weights based on residuals
+        Returns:
+            total_loss (float):
+                The total loss function's value.
+            new_loc_w (List[jnp.array]):
+                Updated RBA weights based on residuals
         """
         # Loss parameter
         eta = jnp.array(0.0001, dtype=float)
@@ -225,82 +237,91 @@ def get_adaptive_loss(pde_loss, model):
 
 def train_PIKAN(model, pde_loss, collocs, bc_collocs, bc_data, glob_w, lr_vals, collect_loss=True, adapt_state=True, loc_w=None, nesterov=True, num_epochs=3001, grid_extend={0: 3}, grid_adapt=[], colloc_adapt={'epochs': []}):
     """
-        Training routine for an adaptive PIKAN
+    PIKAN Adaptive training routine.
+    
+    Args:
+        model (jaxkan.KAN.KAN):
+            jaxKAN KAN model instance.
+        pde_loss (function):
+            Loss function corresponding to the PDE.
+        collocs (jnp.array):
+                Collocation points for the PDE loss.
+        bc_collocs (List[jnp.array]):
+            List of collocation points for the boundary losses.
+        bc_data (List[jnp.array]):
+            List of data corresponding to bc_collocs.
+        glob_w (List[jnp.array]):
+            Global weights for each loss function's term.
+        lr_vals (dict):
+            Dictionary containing information about the optimizer's scheduler.
+        collect_loss (bool):
+            Boolean that determines if training loss data are collected or not.
+        adapt_state (bool):
+            Boolean that determines if adaptive state transition is applied after grid extension.
+        loc_w (List[jnp.array]):
+            Local RBA weights for each loss function's term.
+        nesterov (bool):
+            Boolean that determines if Nesterov momentum is used for Adam.
+        num_epochs (int):
+            Number of training epochs.
+        grid_extend (dict):
+            Dictionary of epochs during which to perform grid extension and new values for grid.
+        grid_adapt (List):
+            List of epochs during which to perform grid adaptation.
+        colloc_adapt (dict):
+            Dictionary containing information about the RDA method.
         
-        Args:
-        -----
-            model (jaxkan.KAN.KAN): jaxKAN type model
-            pde_loss (function): loss function corresponding to the PDE
-            collocs (jnp.array): collocation points for the PDE loss
-            bc_collocs (List[jnp.array]): list of collocation points for the boundary losses
-            bc_data (List[jnp.array]): list of data corresponding to bc_collocs
-            glob_w (List[jnp.array]): global weights for each loss function's term
-            lr_vals (dict): dict containing information about the scheduler
-            collect_loss (bool): boolean that determines if training loss data are collected or not
-            adapt_state (bool): boolean that determines if adaptive state transition is applied during grid extension
-            loc_w (List[jnp.array]): local RBA weights for each loss function's term
-            nesterov (bool): boolean that determines if Nesterov momentum is used for Adam
-            num_epochs (int): number of training epochs
-            grid_extend (dict): dict of epochs during which to perform grid extension and new values for grid
-            grid_adapt (List): list of epochs during which to perform grid adaptation
-            colloc_adapt (dict): dict containing information about the RDA method
-            
-        Returns:
-        --------
-            model (jaxkan.KAN.KAN): trained jaxKAN model
-            None or train_losses (jnp.array): values of the loss function per epoch
-            
-        Example Usage:
-        --------------
-            collocs = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42))
+    Returns:
+        model, None / train_losses (tuple):
+            Trained jaxKAN KAN model instance and values of the loss function per epoch, if collect_loss == True.
         
-            BC1_colloc = jnp.array(sobol_sample(np.array([0,-1]), np.array([0,1]), 2**6, 42))
-            BC1_data = ((BC1_colloc[:,1]**2)*jnp.cos(jnp.pi*BC1_colloc[:,1])).reshape(-1,1)
-
-            BC2_colloc = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,-1]), 2**6, 42))
-            BC2_data = -jnp.ones(BC2_colloc.shape[0]).reshape(-1,1)
-
-            BC3_colloc = jnp.array(sobol_sample(np.array([0,1]), np.array([1,1]), 2**6, 42))
-            BC3_data = -jnp.ones(BC3_colloc.shape[0]).reshape(-1,1)
-
-            bc_collocs = [BC1_colloc, BC2_colloc, BC3_colloc]
-            bc_data = [BC1_data, BC2_data, BC3_data]
-            
-            model = KAN([2,8,8,1], 'spline', {'k': 4, 'G': 3, 'grid_e': 0.02}, True)
-            
-            def pde_loss(model, collocs):
-                def u(x):
-                    y = model(x)
-                    return y
-                    
-                u_t = gradf(u, 0, 1)
-                u_xx = gradf(u, 1, 2)
-                
-                pde_res = u_t(collocs) - 0.001*u_xx(collocs) - 5.0*(u(collocs)-(u(collocs)**3))
-                
-                return pde_res
-        
-            num_epochs = 50000
-            lr_vals = {'init_lr' : 0.001, 'scales' : {0 : 1.0, 15_000 : 0.6, 25_000 : 0.8}}
-            
-            grid_extend = {0 : 3, 5000 : 8, 20_000 : 12}
-            grid_adapt = []
-            
-            glob_w = [jnp.array(1.0, dtype=float)]*4
-            loc_w = [jnp.ones((collocs.shape[0],1)), jnp.ones((BC1_colloc.shape[0],1)),
-                     jnp.ones((BC2_colloc.shape[0],1)), jnp.ones((BC3_colloc.shape[0],1))]
-                     
-            colloc_adapt = {'lower_point' : np.array([0,-1]), 'upper_point' : np.array([1,1]),
-                'M' : 2**16, 'k' : jnp.array(1.0, dtype=float), 'c' : jnp.array(1.0, dtype=float),
-                'epochs' : [10_000, 20_000]}
-                
-            model, train_losses = train_PIKAN(model, pde_loss, collocs, bc_collocs, bc_data, glob_w=glob_w, 
-                                              lr_vals=lr_vals, collect_loss=True, adapt_state=True, loc_w=loc_w,
-                                              nesterov=True, num_epochs=num_epochs, grid_extend=grid_extend,
-                                              grid_adapt=grid_adapt, colloc_adapt=colloc_adapt)
-            
-            
-            
+    Example:
+        >>> collocs = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,1]), 2**12, 42))
+        >>>
+        >>> BC1_colloc = jnp.array(sobol_sample(np.array([0,-1]), np.array([0,1]), 2**6, 42))
+        >>> BC1_data = ((BC1_colloc[:,1]**2)*jnp.cos(jnp.pi*BC1_colloc[:,1])).reshape(-1,1)
+        >>>
+        >>> BC2_colloc = jnp.array(sobol_sample(np.array([0,-1]), np.array([1,-1]), 2**6, 42))
+        >>> BC2_data = -jnp.ones(BC2_colloc.shape[0]).reshape(-1,1)
+        >>>
+        >>> BC3_colloc = jnp.array(sobol_sample(np.array([0,1]), np.array([1,1]), 2**6, 42))
+        >>> BC3_data = -jnp.ones(BC3_colloc.shape[0]).reshape(-1,1)
+        >>>
+        >>> bc_collocs = [BC1_colloc, BC2_colloc, BC3_colloc]
+        >>> bc_data = [BC1_data, BC2_data, BC3_data]
+        >>>
+        >>> model = KAN([2,8,8,1], 'spline', {'k': 4, 'G': 3, 'grid_e': 0.02}, True)
+        >>>
+        >>> def pde_loss(model, collocs):
+        >>>     def u(x):
+        >>>         y = model(x)
+        >>>         return y
+        >>>
+        >>>     u_t = gradf(u, 0, 1)
+        >>>     u_xx = gradf(u, 1, 2)
+        >>>
+        >>>     pde_res = u_t(collocs) - 0.001*u_xx(collocs) - 5.0*(u(collocs)-(u(collocs)**3))
+        >>>
+        >>>     return pde_res
+        >>>
+        >>> num_epochs = 50000
+        >>> lr_vals = {'init_lr' : 0.001, 'scales' : {0 : 1.0, 15_000 : 0.6, 25_000 : 0.8}}
+        >>>
+        >>> grid_extend = {0 : 3, 5000 : 8, 20_000 : 12}
+        >>> grid_adapt = []
+        >>>
+        >>> glob_w = [jnp.array(1.0, dtype=float)]*4
+        >>> loc_w = [jnp.ones((collocs.shape[0],1)), jnp.ones((BC1_colloc.shape[0],1)),
+        >>>          jnp.ones((BC2_colloc.shape[0],1)), jnp.ones((BC3_colloc.shape[0],1))]
+        >>>
+        >>> colloc_adapt = {'lower_point' : np.array([0,-1]), 'upper_point' : np.array([1,1]),
+        >>>                 'M' : 2**16, 'k' : jnp.array(1.0, dtype=float), 'c' : jnp.array(1.0, dtype=float),
+        >>>                 'epochs' : [10_000, 20_000]}
+        >>>
+        >>> model, train_losses = train_PIKAN(model, pde_loss, collocs, bc_collocs, bc_data, glob_w=glob_w, 
+        >>>                                   lr_vals=lr_vals, collect_loss=True, adapt_state=True, loc_w=loc_w,
+        >>>                                   nesterov=True, num_epochs=num_epochs, grid_extend=grid_extend,
+        >>>                                   grid_adapt=grid_adapt, colloc_adapt=colloc_adapt)
     """
     # Setup scheduler for optimizer
     scheduler = optax.piecewise_constant_schedule(

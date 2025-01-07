@@ -7,25 +7,38 @@ from ..utils.general import solve_full_lstsq
         
 class ModifiedChebyLayer(nnx.Module):
     """
-        ModifiedChebyLayer class. Corresponds to the Modified Chebyshev version of KANs,
-        in that the Chebyshev polynomials are calculated recursively and not via the arccos representation.
-        Ref: https://www.sciencedirect.com/science/article/pii/S0045782524005462
+    ModifiedChebyLayer class. Corresponds to the Modified Chebyshev version of KANs, in that the Chebyshev polynomials are calculated recursively and not via the arccos representation. Ref: https://www.sciencedirect.com/science/article/pii/S0045782524005462
 
-        Args:
-        -----
-            n_in (int): number of layer's incoming nodes.
-            n_out (int): number of layer's outgoing nodes.
-            k (int): degree of Chebyshev polynomial (1st kind).
-            rngs (nnx.Rngs): random key selection for initializations wherever necessary.
-            
-        Example Usage:
-        --------------
-            layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+    Attributes:
+        n_in (int):
+            Number of layer's incoming nodes.
+        n_out (int):
+            Number of layer's outgoing nodes.
+        k (int):
+            Degree of Chebyshev polynomial (1st kind).
+        rngs (nnx.Rngs):
+            Random key selection for initializations wherever necessary.
     """
     
     def __init__(self,
                  n_in: int = 2, n_out: int = 5, k: int = 5, rngs: nnx.Rngs = nnx.Rngs(42)
                 ):
+        """
+        Initializes a ModifiedChebyLayer instance.
+        
+        Args:
+            n_in (int):
+                Number of layer's incoming nodes.
+            n_out (int):
+                Number of layer's outgoing nodes.
+            k (int):
+                Degree of Chebyshev polynomial (1st kind).
+            rngs (nnx.Rngs):
+                Random key selection for initializations wherever necessary.
+            
+        Example:
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+        """
 
         # Setup basic parameters
         self.n_in = n_in
@@ -46,26 +59,23 @@ class ModifiedChebyLayer(nnx.Module):
 
     def basis(self, x):
         """
-            Based on the degree, the values of the Chebyshev basis functions are calculated on the input.
+        Based on the degree, the values of the Chebyshev basis functions are calculated on the input.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
 
-            Returns:
-            --------
-                cheby (jnp.array): Chebyshev basis functions applied on inputs
-                    shape (batch, n_in, k+1)
-                
-            Example Usage:
-            --------------
-                layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                output = layer.basis(x_batch)
+        Returns:
+            cheby (jnp.array):
+                Chebyshev basis functions applied on inputs, shape (batch, n_in, k+1).
+            
+        Example:
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> output = layer.basis(x_batch)
         """
         
         batch = x.shape[0]
@@ -88,23 +98,21 @@ class ModifiedChebyLayer(nnx.Module):
 
     def update_grid(self, x, k_new):
         """
-            For the case of ChebyKANs there is no concept of grid. However, a fine-graining approach
-            can be followed by progressively increasing the degree of the polynomials.
+        For the case of ChebyKANs there is no concept of grid. However, a fine-graining approach can be followed by progressively increasing the degree of the polynomials.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
-                k_new (int): new Chebyshev polynomial degree
-                
-            Example Usage:
-            --------------
-                layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                layer.update_grid(x=x_batch, k_new=7)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
+            k_new (int):
+                New Chebyshev polynomial degree
+            
+        Example:
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> layer.update_grid(x=x_batch, k_new=7)
         """
 
         # Apply the inputs to the current grid to acquire y = Sum(ciTi(x)), where ci are
@@ -129,26 +137,23 @@ class ModifiedChebyLayer(nnx.Module):
 
     def __call__(self, x):
         """
-            The layer's forward pass.
+        The layer's forward pass.
 
-            Args:
-            -----
-                x (jnp.array): inputs
-                    shape (batch, n_in)
+        Args:
+            x (jnp.array):
+                Inputs, shape (batch, n_in).
 
-            Returns:
-            --------
-                y (jnp.array): output of the forward pass
-                    shape (batch, n_out)
-                
-            Example Usage:
-            --------------
-                layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
-                              
-                key = jax.random.PRNGKey(42)
-                x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
-                
-                output = layer(x_batch)
+        Returns:
+            y (jnp.array):
+                Output of the forward pass, shape (batch, n_out).
+            
+        Example:
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>>
+            >>> key = jax.random.PRNGKey(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>>
+            >>> output = layer(x_batch)
         """
         
         batch = x.shape[0]
