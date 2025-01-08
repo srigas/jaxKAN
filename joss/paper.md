@@ -74,10 +74,15 @@ In the following, a brief discussion on the core functionality of `jaxKAN` is pr
 
 In `jaxKAN`, KANs are built as instances of the `KAN` class, which composes one or more Kolmogorov–Arnold layers.
 These layers are defined within the `jaxkan.layers` module, which currently includes five types:
+
 - `base`: the original B-spline-based layer.
+
 - `spline`: the efficient variant of the original B-splie-based layer [@effkan].
+
 - `cheby`: a layer using Chebyshev polynomials.
+
 - `mod-cheby`: a layer using Chebyshev polynomials without incorporating trigonometric functions for their calculation [@Karniadakis:2024].
+
 - `fourier`: a layer utilizing sines and cosines as basis functions. 
 
 While these cover the most commonly used basis functions, the library will remain under active development,
@@ -116,15 +121,14 @@ $$ u\left(t, x=-1\right) = u\left(t, x=1\right) = -1, $$
 
 is solved, by training a network of `spline` layers for $5\cdot 10^4$ epochs.
 
-![Upper row: reference (left), vanilla PIKAN (middle) and adaptive PIKAN (right) solutions to Eq. \autoref{eq:AC}. Lower row: PIKAN absolute errors relative to the reference solution.\label{fig:AC}](figures/AC.png)
+![Upper row: reference solution to \autoref{eq:AC}. Middle row: approximation by vanilla PIKAN (left) and adaptive PIKAN (right). Lower row: absolute errors relative to the reference solution.\label{fig:AC}](figures/AC.png)
 
-In the upper row of Fig. \autoref{fig:AC}, three solution plots for the equation are depicted,
-corresponding to the reference solution (left), the solution obtained from a vanilla PIKAN (middle) and the solution
-obtained from an adaptively trained KAN. It is noted that the Allen-Cahn equation does not have an analytical solution,
-so the reference solution used by @Wu:2022 is adopted. The lower row of Fig. \autoref{fig:AC} showcases the absolute error
-for each PIKAN's approximation, relative to the reference.
-
-This example highlights the benefits of adaptive training, as the vanilla PIKAN fails to capture
-the details of the reference solution in the domain mpla mpla
+The reference solution to \autoref{eq:AC} is depicted in the upper row of \autoref{fig:AC}; since the Allen-Cahn
+equation does not have an analytical solution, the reference solution used by @Wu:2022 is adopted herein.
+The plots in the middle row of \autoref{fig:AC} depict two approximate solutions, corresponding to the results obtained
+after training a vanilla PIKAN, i.e., a PIKAN trained without adopting adaptive techniques, (left) and an adaptively
+trained PIKAN (right). Finally, the lower row of \autoref{fig:AC} showcases the absolute error corresponding to each
+PIKAN's approximation, relative to the reference. This example highlights the benefits of adaptive training, as the
+vanilla PIKAN fails to capture the details of the reference solution, especially in the $t \geq 0.3$ region.
 
 # References
