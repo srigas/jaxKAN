@@ -63,7 +63,68 @@ adaptive state transitions, or basis order extension - to tackle problems where 
 underperform. Moreover, it delivers specialized utilities for the adaptive training of PIKANs, a field where KANs
 have proven to be equally or even more efficient than MLPs in several occasions [@Karniadakis:2024; @Rigas:2024].
 At the time of writing, `jaxKAN` has been used in a series of academic works relevant to PDE
-problems [@Howard1:2024; @Rigas:2024; @Howard2:2024; @Jacob:2024], also showcasing significantly
+problems [@Howard1:2024; @Rigas:2024; @Howard2:2024; @Jacob:2024], and has showcased significantly
 faster performance compared to the original `pykan` implementation [@Rigas:2024].
+
+# Core Functionality
+
+In the following, a brief discussion on the core functionality of `jaxKAN` is provided.
+
+## Layer Selection
+
+In `jaxKAN`, KANs are built as instances of the `KAN` class, which composes one or more Kolmogorov–Arnold layers.
+These layers are defined within the `jaxkan.layers` module, which currently includes five types:
+- `base`: the original B-spline-based layer.
+- `spline`: the efficient variant of the original B-splie-based layer [@effkan].
+- `cheby`: a layer using Chebyshev polynomials.
+- `mod-cheby`: a layer using Chebyshev polynomials without incorporating trigonometric functions for their calculation [@Karniadakis:2024].
+- `fourier`: a layer utilizing sines and cosines as basis functions. 
+
+While these cover the most commonly used basis functions, the library will remain under active development,
+aiming to add further variants as research continues and identifies promising new options.
+
+## Network Methods
+
+Each KAN instance provides three primary methods: initialization for customizing layer parameters, a forward pass for
+passing inputs through the network, and an `update_grids` method for in-place adjustments to each layer's grid.
+Although grid updates are naturally interpreted in spline-based layers, they also extend to other types: for Chebyshev
+layers, the method increases the degree of the polynomial basis functions, while in Fourier layers the method
+adds more terms to the Fourier sums. Notably, this method requires a technique to solve batched least-squares
+problems in parallel - an operation currently not supported natively by JAX libraries but implemented internally in
+`jaxKAN` for optimal performance.
+
+## PIKAN utilities
+
+Beyond its low-level KAN functionality, `jaxKAN` supplies dedicated utilities for PIKANs. Users wishing to fine-tune
+every detail can extend the `KAN` class to their own needs, as illustrated in the documentation's tutorials.
+Alternatively, a higher-level `train_PIKAN` function automates the end-to-end adaptive training loop, allowing a PIKAN
+to solve a forward PDE problem with minimal overhead.
+
+# Case Study
+
+As a case study, the Allen-Cahn equation, defined by
+
+\begin{equation}\label{eq:AC}
+\frac{\partial u}{\partial t} - D\frac{\partial^2 u}{\partial x^2} + 5 \left(u^3 - u\right) = 0,
+\end{equation}
+
+for $D = 10^{-3}$ in the $\Omega = [0,1]\times [-1, 1]$ domain, subject to the boundary conditions
+
+$$ u\left(t=0, x\right) = x^2 \cos\left(\pi x\right), $$
+
+$$ u\left(t, x=-1\right) = u\left(t, x=1\right) = -1, $$
+
+is solved, by training a network of `spline` layers for $5\cdot 10^4$ epochs.
+
+![Upper row: reference (left), vanilla PIKAN (middle) and adaptive PIKAN (right) solutions to Eq. \autoref{eq:AC}. Lower row: PIKAN absolute errors relative to the reference solution.\label{fig:AC}](figures/AC.png)
+
+In the upper row of Fig. \autoref{fig:AC}, three solution plots for the equation are depicted,
+corresponding to the reference solution (left), the solution obtained from a vanilla PIKAN (middle) and the solution
+obtained from an adaptively trained KAN. It is noted that the Allen-Cahn equation does not have an analytical solution,
+so the reference solution used by @Wu:2022 is adopted. The lower row of Fig. \autoref{fig:AC} showcases the absolute error
+for each PIKAN's approximation, relative to the reference.
+
+This example highlights the benefits of adaptive training, as the vanilla PIKAN fails to capture
+the details of the reference solution in the domain mpla mpla
 
 # References
