@@ -72,12 +72,12 @@ In the following, a brief discussion on the core functionality of `jaxKAN` is pr
 
 ## Layer Selection
 
-In `jaxKAN`, KANs are built as instances of the `KAN` class, which composes one or more Kolmogorov–Arnold layers.
+In `jaxKAN`, KANs are built as instances of the `KAN` class, which comprises one or more Kolmogorov–Arnold layers.
 These layers are defined within the `jaxkan.layers` module, which currently includes five types:
 
 - `base`: the original B-spline-based layer.
 
-- `spline`: the efficient variant of the original B-splie-based layer [@effkan].
+- `spline`: the efficient variant of the original B-spline-based layer [@effkan].
 
 - `cheby`: a layer using Chebyshev polynomials.
 
