@@ -9,7 +9,7 @@ tags:
 authors:
   - name: Spyros Rigas
     orcid: 0009-0009-2352-8709
-	corresponding: true
+    corresponding: true
     affiliation: 1
   - name: Michalis Papachristou
     orcid: 0000-0001-5650-4206
