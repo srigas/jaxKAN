@@ -124,7 +124,7 @@ is solved, by training a network of `spline` layers for $5\cdot 10^4$ epochs.
 ![Upper row: reference solution to \autoref{eq:AC}. Middle row: approximation by vanilla PIKAN (left) and adaptive PIKAN (right). Lower row: absolute errors relative to the reference solution.\label{fig:AC}](figures/AC.png)
 
 The reference solution to \autoref{eq:AC} is depicted in the upper row of \autoref{fig:AC}; since the Allen-Cahn
-equation does not have an analytical solution, the reference solution used by @Wu:2022 is adopted herein.
+equation does not have an analytical solution, the reference solution used by @Wu:2023 is adopted herein.
 The plots in the middle row of \autoref{fig:AC} depict two approximate solutions, corresponding to the results obtained
 after training a vanilla PIKAN, i.e., a PIKAN trained without adopting adaptive techniques, (left) and an adaptively
 trained PIKAN (right). Finally, the lower row of \autoref{fig:AC} showcases the absolute error corresponding to each
