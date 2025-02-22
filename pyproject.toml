@@ -29,12 +29,11 @@ license = {file = "LICENSE"}
 requires-python = ">=3.10"
 
 dependencies = [
-    "numpy==2.1.3",
-    "scipy==1.14.1",
-    "jax[cpu]==0.4.35",
-    "optax==0.2.4",
-    "flax==0.10.2",
-    "pytest==8.3.4",
+    "numpy",
+    "scipy",
+    "jax[cpu]",
+    "optax",
+    "flax",
 ]
 
 
@@ -45,12 +44,13 @@ Issues = "https://github.com/srigas/jaxkan/issues"
 
 [project.optional-dependencies]
 gpu = [
-    "jax[cuda12]==0.4.35"
+    "jax[cuda12]"
 ]
 doc = [
-    "jupyterlab==4.3.0",
-    "matplotlib==3.9.2",
-    "scikit-learn==1.5.2",
+    "jupyterlab",
+    "matplotlib",
+    "scikit-learn",
+    "pytest",
     "sphinx",
     "sphinx-rtd-theme",
     "sphinx-autobuild",
