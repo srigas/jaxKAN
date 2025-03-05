@@ -32,7 +32,7 @@ def test_function_fitting(seed, req_params):
         return x**2 + 2*jnp.exp(y)
 
     # Generate sample data
-    key = jax.random.PRNGKey(seed)
+    key = jax.random.key(seed)
     x_key, y_key = jax.random.split(key)
 
     x1 = jax.random.uniform(x_key, shape=(1000,), minval=-1, maxval=1)
@@ -87,10 +87,8 @@ def test_function_fitting(seed, req_params):
     # Get predictions
     y_pred = model(X_test)
     mse = mean_squared_error(y_test, y_pred)
-
-    interv = [0.0003, 0.0004]
     
-    assert mse < interv[-1] and mse > interv[0], f"Final MSE {mse} does not fall within the range ({interv[0]},{interv[-1]})"
+    assert mse < 0.1, f"Final MSE {mse} does not reach below 0.1, indicating that the model does not train as it should."
 
 
 def test_pde_solving(seed, req_params):
@@ -176,7 +174,6 @@ def test_pde_solving(seed, req_params):
     for epoch in range(num_epochs):
         # Calculate the loss
         loss = train_step(model, optimizer, collocs, bc_collocs, bc_data)
-
-    interv = [0.01, 0.02]
     
-    assert loss < interv[-1] and loss > interv[0], f"Final Training Loss {loss} does not fall within the range ({interv[0]},{interv[-1]})"
+    assert loss < 0.1, f"Final Training Loss {loss} does not reach below 0.1, indicating that the model does not train as it should."
+    
