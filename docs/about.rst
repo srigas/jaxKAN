@@ -7,6 +7,9 @@ jaxKAN is a Python package designed to enable the training of Kolmogorov-Arnold 
 
 Although KANs implemented in jaxKAN can be applied across a wide range of problem domains as a powerful alternative to Multilayer Perceptrons (MLPs), the package places a strong emphasis on their application in Physics-Informed Kolmogorov-Arnold Networks (PIKANs). To support this focus, jaxKAN includes specialized utilities and tutorials aimed at the task of solving forward or inverse PDE problems.
 
+The source code for jaxKAN can be found in the `jaxKAN GitHub Repository <https://github.com/srigas/jaxKAN>`_.
+
+
 Research
 ---------
 

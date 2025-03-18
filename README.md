@@ -13,6 +13,11 @@ jaxKAN is a Python package designed to enable the training of Kolmogorov-Arnold 
 Extensive documentation on jaxKAN, including installation & contributing guidelines, API reference and tutorials, can be found [here](https://jaxkan.readthedocs.io/).
 
 
+## Contributing
+
+We warmly welcome community contributions to jaxKAN! For details on the types of contributions that will help jaxKAN evolve, as well as guidelines on how to contribute, visit [this](https://jaxkan.readthedocs.io/en/latest/contributing.html) page of our documentation.
+
+
 ## Citation
 
 There is a JOSS paper currently submitted under review for jaxKAN. Until it is published, if you utilized `jaxKAN` for your own academic work, please consider using the following citation, which is the paper in which the framework was first introduced for PIKANs:

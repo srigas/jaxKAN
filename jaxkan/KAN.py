@@ -5,6 +5,8 @@ from flax import nnx
 
 from .layers import get_layer
 
+from typing import Union
+
 
 class KAN(nnx.Module):
     """
@@ -24,7 +26,7 @@ class KAN(nnx.Module):
     """
     
     def __init__(self,
-                 layer_dims: List[int], layer_type: str = "base", required_parameters: dict = {}, 
+                 layer_dims: List[int], layer_type: str = "base", required_parameters: Union[None, dict] = None, 
                  add_bias: bool = True, rngs: nnx.Rngs = nnx.Rngs(42)
                 ):
         """
