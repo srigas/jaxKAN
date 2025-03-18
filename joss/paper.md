@@ -91,12 +91,13 @@ aiming to add further variants as research continues and identifies promising ne
 ## Network Methods
 
 Each KAN instance provides three primary methods: initialization for customizing layer parameters, a forward pass for
-passing inputs through the network, and an `update_grids` method for in-place adjustments to each layer's grid.
-Although grid updates are naturally interpreted in spline-based layers, they also extend to other types: for Chebyshev
-layers, the method increases the degree of the polynomial basis functions, while in Fourier layers the method
-adds more terms to the Fourier sums. Notably, this method requires a technique to solve batched least-squares
-problems in parallel - an operation currently not supported natively by JAX libraries but implemented internally in
-`jaxKAN` for optimal performance.
+passing inputs through the network, and an `update_grids` method for in-place adjustments to each layer's grid. In particular,
+the `update_grids` method can be called during training with a new grid size as its argument to extend the network's current
+grid and subsequently adapt the extended grid to the training data. Although grid updates are naturally interpreted in spline-based
+layers, they also extend to other types: for Chebyshev layers, the method increases the degree of the polynomial basis functions,
+while in Fourier layers the method adds more terms to the Fourier sums. Notably, this method requires a technique to solve
+batched least-squares problems in parallel - an operation currently not supported natively by JAX libraries but implemented
+internally in `jaxKAN` for optimal performance.
 
 ## PIKAN utilities
 
