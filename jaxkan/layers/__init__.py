@@ -1,8 +1,7 @@
-from .BaseLayer import BaseLayer
-from .SplineLayer import SplineLayer
-from .ChebyLayer import ChebyLayer
-from .ModifiedChebyLayer import ModifiedChebyLayer
-from .FourierLayer import FourierLayer
+from .Spline import BaseLayer, SplineLayer
+from .Chebyshev import ChebyLayer, ModifiedChebyLayer
+from .Fourier import FourierLayer
+
 
 def get_layer(layer_type: str):
     """
