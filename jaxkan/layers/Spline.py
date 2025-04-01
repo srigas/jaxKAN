@@ -1,6 +1,9 @@
-from jax import numpy as jnp
+import jax
+import jax.numpy as jnp
 
 from flax import nnx
+
+from typing import Union
 
 from ..grids.BaseGrid import BaseGrid
 from ..grids.SplineGrid import SplineGrid
@@ -25,20 +28,12 @@ class BaseLayer(nnx.Module):
             An initial range for the grid's ends, although adaptivity can completely change it.
         grid_e (float):
             Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
-        residual (nn.Module):
+        residual (Union[nnx.Module, None]):
             Function that is applied on samples to calculate residual activation.
-        base_basis (float):
-            std coefficient for initialization of basis weights.
-        base_spline (float):
-            std coefficient for initialization of spline weights.
-        base_res (float):
-            std coefficient for initialization of residual weights.
-        pow_basis (float):
-            Power to raise the 1.0/n_in term for basis weights initialization. 
-        pow_spline (float):
-            Power to raise the 1.0/n_in term for spline weights initialization.
-        pow_res (float):
-            Power to raise the 1.0/n_in term for residual weights initialization.
+        external_weights (bool):
+            Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
+        init_scheme (Union[dict, None]):
+            Dictionary that defines how the trainable parameters of the layer are initialized.
         seed (int):
             Random key selection for initializations wherever necessary.
     """
@@ -46,13 +41,9 @@ class BaseLayer(nnx.Module):
     def __init__(self,
                  n_in: int = 2, n_out: int = 5, k: int = 3,
                  G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05,
-                 residual: nnx.Module = nnx.silu,
-                 base_basis: float = 1.0,
-                 base_spline: float = 1.0,
-                 base_res: float = 1.0,
-                 pow_basis: float = 0.5,
-                 pow_spline: float = 0.5,
-                 pow_res: float = 0.5,
+                 residual: Union[nnx.Module, None] = nnx.silu,
+                 external_weights: bool = True,
+                 init_scheme: Union[dict, None] = None,
                  seed: int = 42
                 ):
         """
@@ -71,28 +62,19 @@ class BaseLayer(nnx.Module):
                 An initial range for the grid's ends, although adaptivity can completely change it.
             grid_e (float):
                 Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
-            residual (nn.Module):
+            residual (Union[nnx.Module, None]):
                 Function that is applied on samples to calculate residual activation.
-            base_basis (float):
-                std coefficient for initialization of basis weights.
-            base_spline (float):
-                std coefficient for initialization of spline weights.
-            base_res (float):
-                std coefficient for initialization of residual weights.
-            pow_basis (float):
-                Power to raise the 1.0/n_in term for basis weights initialization. 
-            pow_spline (float):
-                Power to raise the 1.0/n_in term for spline weights initialization.
-            pow_res (float):
-                Power to raise the 1.0/n_in term for residual weights initialization.
+            external_weights (bool):
+                Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
+            init_scheme (Union[dict, None]):
+                Dictionary that defines how the trainable parameters of the layer are initialized.
             seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                   pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                   external_weights = True, init_scheme = None, 
             >>>                   seed = 42)
         """
 
@@ -100,38 +82,31 @@ class BaseLayer(nnx.Module):
         self.n_in = n_in
         self.n_out = n_out
         self.k = k
+        self.grid_range = grid_range
         self.residual = residual
 
         # Setup nnx rngs
         rngs = nnx.Rngs(seed)
 
-        # Now register and initialize all parameters of the layer. Specifically:
-        # grid: non-trainable variable
-        # c_basis, c_spl, c_res: trainable parameters
-
         # Initialize the grid
         self.grid = BaseGrid(n_in=n_in, n_out=n_out, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
 
-        # Register & initialize the spline basis functions' coefficients as trainable parameters
-        # They are drawn from a normal distribution with zero mean and an std of basis_std
-        basis_std = base_basis/(self.n_in**pow_basis)
-        self.c_basis = nnx.Param(
-            nnx.initializers.normal(stddev=basis_std)(
-                rngs.params(), (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32)
-        )
+        # If external_weights == True, we initialize weights for the spline functions equal to unity
+        if external_weights == True:
+            self.c_spl = nnx.Param(
+            nnx.initializers.ones(
+                    rngs.params(), (self.n_out, self.n_in), jnp.float32)
+            )
+        else:
+            self.c_spl = None
 
-        # Register the factors of spline and residual activations as parameters
-        spline_std = base_spline/(self.n_in**pow_spline)
-        self.c_spl = nnx.Param(
-        nnx.initializers.normal(stddev=spline_std)(
-                rngs.params(), (self.n_out, self.n_in), jnp.float32)
-        )
+        # Initialize the remaining trainable parameters, based on the selected initialization scheme
+        c_res, c_basis = self._initialize_params(init_scheme, seed)
+
+        self.c_basis = nnx.Param(c_basis)
         
-        res_std = base_res/(self.n_in**pow_res)
-        self.c_res = nnx.Param(
-        nnx.initializers.normal(stddev=res_std)(
-                rngs.params(), (self.n_out, self.n_in), jnp.float32)
-        )
+        if residual is not None:
+            self.c_res = nnx.Param(c_res)
 
     def basis(self, x):
         """
@@ -148,8 +123,7 @@ class BaseLayer(nnx.Module):
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                   pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                   external_weights = True, init_scheme = None, 
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
@@ -181,6 +155,89 @@ class BaseLayer(nnx.Module):
         return basis_splines
 
 
+    def _initialize_params(self, init_scheme, seed):
+        """
+        Initializes the c_res (if residual is activated) and c_basis trainable parameters (only used in __init__)
+
+        Args:
+            init_scheme (Union[dict, None]):
+                Dictionary that defines how the trainable parameters of the layer are initialized. Options: "default", "lecun", "custom"
+        """
+        key = jax.random.key(seed)
+
+        if init_scheme is None:
+            init_scheme = {"type" : "default"}
+
+        init_type = init_scheme.get("type", "default")
+
+        # Case where no residual is used
+        if self.residual is None:
+            c_res = None
+
+        # Default initialization presented in original paper
+        if init_type == "default":
+
+            if self.residual is not None:
+                c_res = nnx.initializers.glorot_uniform(in_axis=-1, out_axis=-2)(
+                    key, (self.n_out, self.n_in), jnp.float32
+                )
+            
+            std = init_scheme.get("std", 0.1)
+            c_basis = nnx.initializers.normal(stddev=std)(
+                key, (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32
+            )
+
+        # LeCun-like initialization, where Var[in] = Var[out]
+        elif init_type == "lecun":
+
+            # Generate a sample of 10^5 points
+            minval, maxval = self.grid_range[0], self.grid_range[-1]
+            sample = jax.random.uniform(key, shape=(100000,), minval=minval, maxval=maxval)
+            sample_std = sample.std().item()
+            
+            # Extend the sample to be able to pass through basis
+            sample_ext = jnp.tile(sample[:, None], (1, self.n_in))
+            # Calculate B_m^2(x)
+            y_b = self.basis(sample_ext)
+            # Calculate the average of B_m^2(x)
+            y_b_sq = y_b**2
+            y_b_sq_mean = y_b_sq.mean().item()
+
+            if self.residual is not None:
+                # Variance equipartitioned across all terms
+                scale = self.n_in * (self.grid.G + self.k + 1)
+                # Apply the residual function
+                y_res = self.residual(sample)
+                # Calculate the average of residual^2(x)
+                y_res_sq = y_res**2
+                y_res_sq_mean = y_res_sq.mean().item()
+
+                std_res = sample_std/jnp.sqrt(scale*y_res_sq_mean)
+
+                c_res = nnx.initializers.normal(stddev=std_res)(key, (self.n_out, self.n_in), jnp.float32)
+            else:
+                # Variance equipartitioned across G+k terms
+                scale = self.n_in * (self.grid.G + self.k)
+
+            std_b = sample_std/jnp.sqrt(scale*y_b_sq_mean)
+            c_basis = nnx.initializers.normal(stddev=std_b)(
+                key, (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32
+            )
+
+        # Custom initialization, where the user inputs pre-determined arrays
+        elif init_type == "custom":
+            
+            if self.residual is not None:
+                c_res = init_scheme.get("c_res", None)
+
+            c_basis = init_scheme.get("c_basis", None)
+            
+        else:
+            raise ValueError(f"Unknown initialization method: {init_type}")
+
+        return c_res, c_basis
+
+
     def update_grid(self, x, G_new):
         """
         Performs a grid update given a new value for G (i.e., G_new) and adapts it to the given data, x. Additionally, re-initializes the c_basis parameters to a better estimate, based on the new grid.
@@ -194,8 +251,7 @@ class BaseLayer(nnx.Module):
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                   pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                   external_weights = True, init_scheme = None, 
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
@@ -243,8 +299,7 @@ class BaseLayer(nnx.Module):
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                   pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                   external_weights = True, init_scheme = None, 
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
@@ -254,14 +309,7 @@ class BaseLayer(nnx.Module):
         """
         
         batch = x.shape[0]
-        # Extend to shape (batch, n_in*n_out)
-        x_ext = jnp.einsum('ij,k->ikj', x, jnp.ones(self.n_out,)).reshape((batch, self.n_in * self.n_out))
-        # Transpose to shape (n_in*n_out, batch)
-        x_ext = jnp.transpose(x_ext, (1, 0))
-        
-        # Calculate residual activation - shape (batch, n_in*n_out)
-        res = jnp.transpose(self.residual(x_ext), (1,0))
-
+            
         # Calculate spline basis activations
         Bi = self.basis(x) # (n_in*n_out, G+k, batch)
         ci = self.c_basis.value # (n_in*n_out, G+k)
@@ -270,12 +318,27 @@ class BaseLayer(nnx.Module):
         # Transpose to shape (batch, n_in*n_out)
         spl = jnp.transpose(spl, (1,0))
 
-        # Reshape constants to (1, n_in*n_out)
-        cnst_spl = jnp.expand_dims(self.c_spl.value, axis=0).reshape((1, self.n_in * self.n_out))
-        cnst_res = jnp.expand_dims(self.c_res.value, axis=0).reshape((1, self.n_in * self.n_out))
-        
-        # Calculate the entire activation
-        y = (cnst_spl * spl) + (cnst_res * res) # (batch, n_in*n_out)
+        # Check if external_weights == True
+        if self.c_spl is not None:
+            # Reshape constants to (1, n_in*n_out)
+            cnst_spl = jnp.expand_dims(self.c_spl.value, axis=0).reshape((1, self.n_in * self.n_out))
+            # Calculate spline term
+            y = cnst_spl * spl # (batch, n_in*n_out)
+        else:
+            y = spl # (batch, n_in*n_out)
+
+        # Check if there is a residual function
+        if self.residual is not None:
+            # Extend x to shape (batch, n_in*n_out)
+            x_ext = jnp.einsum('ij,k->ikj', x, jnp.ones(self.n_out,)).reshape((batch, self.n_in * self.n_out))
+            # Transpose to shape (n_in*n_out, batch)
+            x_ext = jnp.transpose(x_ext, (1, 0))
+            # Calculate residual activation - shape (batch, n_in*n_out)
+            res = jnp.transpose(self.residual(x_ext), (1,0))
+            # Reshape constant to (1, n_in*n_out)
+            cnst_res = jnp.expand_dims(self.c_res.value, axis=0).reshape((1, self.n_in * self.n_out))
+            # Calculate the entire activation
+            y += cnst_res * res # (batch, n_in*n_out)
         
         # Reshape and sum to cast to (batch, n_out) shape
         y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
@@ -301,20 +364,12 @@ class SplineLayer(nnx.Module):
             An initial range for the grid's ends, although adaptivity can completely change it.
         grid_e (float):
             Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
-        residual (nn.Module):
+        residual (Union[nnx.Module, None]):
             Function that is applied on samples to calculate residual activation.
-        base_basis (float):
-            std coefficient for initialization of basis weights.
-        base_spline (float):
-            std coefficient for initialization of spline weights.
-        base_res (float):
-            std coefficient for initialization of residual weights.
-        pow_basis (float):
-            Power to raise the 1.0/n_in term for basis weights initialization. 
-        pow_spline (float):
-            Power to raise the 1.0/n_in term for spline weights initialization.
-        pow_res (float):
-            Power to raise the 1.0/n_in term for residual weights initialization.
+        external_weights (bool):
+            Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
+        init_scheme (Union[dict, None]):
+            Dictionary that defines how the trainable parameters of the layer are initialized.
         seed (int):
             Random key selection for initializations wherever necessary.
     """
@@ -322,13 +377,9 @@ class SplineLayer(nnx.Module):
     def __init__(self,
                  n_in: int = 2, n_out: int = 5, k: int = 3,
                  G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05,
-                 residual: nnx.Module = nnx.silu,
-                 base_basis: float = 1.0,
-                 base_spline: float = 1.0,
-                 base_res: float = 1.0,
-                 pow_basis: float = 0.5,
-                 pow_spline: float = 0.5,
-                 pow_res: float = 0.5,
+                 residual: Union[nnx.Module, None] = nnx.silu,
+                 external_weights: bool = True,
+                 init_scheme: Union[dict, None] = None,
                  seed: int = 42
                 ):
         """
@@ -347,28 +398,19 @@ class SplineLayer(nnx.Module):
                 An initial range for the grid's ends, although adaptivity can completely change it.
             grid_e (float):
                 Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
-            residual (nn.Module):
+            residual (Union[nnx.Module, None]):
                 Function that is applied on samples to calculate residual activation.
-            base_basis (float):
-                std coefficient for initialization of basis weights.
-            base_spline (float):
-                std coefficient for initialization of spline weights.
-            base_res (float):
-                std coefficient for initialization of residual weights.
-            pow_basis (float):
-                Power to raise the 1.0/n_in term for basis weights initialization. 
-            pow_spline (float):
-                Power to raise the 1.0/n_in term for spline weights initialization.
-            pow_res (float):
-                Power to raise the 1.0/n_in term for residual weights initialization.
+            external_weights (bool):
+                Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
+            init_scheme (Union[dict, None]):
+                Dictionary that defines how the trainable parameters of the layer are initialized.
             seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     external_weights = True, init_scheme = None, 
             >>>                     seed = 42)
         """
 
@@ -376,39 +418,31 @@ class SplineLayer(nnx.Module):
         self.n_in = n_in
         self.n_out = n_out
         self.k = k
+        self.grid_range = grid_range
         self.residual = residual
 
         # Setup nnx rngs
         rngs = nnx.Rngs(seed)
 
-        # Now register and initialize all parameters of the layer. Specifically:
-        # grid: non-trainable variable
-        # c_basis, c_spl, c_res: trainable parameters
-
         # Initialize the grid - shape (n_in, G+2k+1)
         self.grid = SplineGrid(n_nodes=n_in, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
 
-        # Register & initialize the spline basis functions' coefficients as trainable parameters
-        # shape (n_out, n_in, G+k)
-        basis_std = base_basis/(self.n_in**pow_basis)
-        self.c_basis = nnx.Param(
-            nnx.initializers.normal(stddev=basis_std)(
-                rngs.params(), (self.n_out, self.n_in, self.grid.G+self.k), jnp.float32)
-        )
+        # If external_weights == True, we initialize weights for the spline functions equal to unity
+        if external_weights == True:
+            self.c_spl = nnx.Param(
+            nnx.initializers.ones(
+                    rngs.params(), (self.n_out, self.n_in), jnp.float32)
+            )
+        else:
+            self.c_spl = None
 
-        # Register the factors of spline and residual activations as parameters
-        # shape (n_out, n_in)
-        spline_std = base_spline/(self.n_in**pow_spline)
-        self.c_spl = nnx.Param(
-        nnx.initializers.normal(stddev=spline_std)(
-                rngs.params(), (self.n_out, self.n_in), jnp.float32)
-        )
+        # Initialize the remaining trainable parameters, based on the selected initialization scheme
+        c_res, c_basis = self._initialize_params(init_scheme, seed)
+
+        self.c_basis = nnx.Param(c_basis)
         
-        res_std = base_res/(self.n_in**pow_res)
-        self.c_res = nnx.Param(
-        nnx.initializers.normal(stddev=res_std)(
-                rngs.params(), (self.n_out, self.n_in), jnp.float32)
-        )
+        if residual is not None:
+            self.c_res = nnx.Param(c_res)
 
     def basis(self, x):
         """
@@ -425,8 +459,7 @@ class SplineLayer(nnx.Module):
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     external_weights = True, init_scheme = None, 
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
@@ -451,6 +484,89 @@ class SplineLayer(nnx.Module):
         return basis_splines
 
 
+    def _initialize_params(self, init_scheme, seed):
+        """
+        Initializes the c_res (if residual is activated) and c_basis trainable parameters (only used in __init__)
+
+        Args:
+            init_scheme (Union[dict, None]):
+                Dictionary that defines how the trainable parameters of the layer are initialized. Options: "default", "lecun", "custom"
+        """
+        key = jax.random.key(seed)
+
+        if init_scheme is None:
+            init_scheme = {"type" : "default"}
+
+        init_type = init_scheme.get("type", "default")
+
+        # Case where no residual is used
+        if self.residual is None:
+            c_res = None
+
+        # Default initialization presented in original paper
+        if init_type == "default":
+
+            if self.residual is not None:
+                c_res = nnx.initializers.glorot_uniform(in_axis=-1, out_axis=-2)(
+                    key, (self.n_out, self.n_in), jnp.float32
+                )
+            
+            std = init_scheme.get("std", 0.1)
+            c_basis = nnx.initializers.normal(stddev=std)(
+                key, (self.n_out, self.n_in, self.grid.G+self.k), jnp.float32
+            )
+
+        # LeCun-like initialization, where Var[in] = Var[out]
+        elif init_type == "lecun":
+
+            # Generate a sample of 10^5 points
+            minval, maxval = self.grid_range[0], self.grid_range[-1]
+            sample = jax.random.uniform(key, shape=(100000,), minval=minval, maxval=maxval)
+            sample_std = sample.std().item()
+            
+            # Extend the sample to be able to pass through basis
+            sample_ext = jnp.tile(sample[:, None], (1, self.n_in))
+            # Calculate B_m^2(x)
+            y_b = self.basis(sample_ext)
+            # Calculate the average of B_m^2(x)
+            y_b_sq = y_b**2
+            y_b_sq_mean = y_b_sq.mean().item()
+
+            if self.residual is not None:
+                # Variance equipartitioned across all terms
+                scale = self.n_in * (self.grid.G + self.k + 1)
+                # Apply the residual function
+                y_res = self.residual(sample)
+                # Calculate the average of residual^2(x)
+                y_res_sq = y_res**2
+                y_res_sq_mean = y_res_sq.mean().item()
+
+                std_res = sample_std/jnp.sqrt(scale*y_res_sq_mean)
+
+                c_res = nnx.initializers.normal(stddev=std_res)(key, (self.n_out, self.n_in), jnp.float32)
+            else:
+                # Variance equipartitioned across G+k terms
+                scale = self.n_in * (self.grid.G + self.k)
+
+            std_b = sample_std/jnp.sqrt(scale*y_b_sq_mean)
+            c_basis = nnx.initializers.normal(stddev=std_b)(
+                key, (self.n_out, self.n_in, self.grid.G+self.k), jnp.float32
+            )
+
+        # Custom initialization, where the user inputs pre-determined arrays
+        elif init_type == "custom":
+            
+            if self.residual is not None:
+                c_res = init_scheme.get("c_res", None)
+
+            c_basis = init_scheme.get("c_basis", None)
+            
+        else:
+            raise ValueError(f"Unknown initialization method: {init_type}")
+
+        return c_res, c_basis
+
+
     def update_grid(self, x, G_new):
         """
         Performs a grid update given a new value for G (i.e., G_new) and adapts it to the given data, x. Additionally, re-initializes the c_basis parameters to a better estimate, based on the new grid.
@@ -464,8 +580,7 @@ class SplineLayer(nnx.Module):
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     external_weights = True, init_scheme = None, 
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
@@ -509,8 +624,7 @@ class SplineLayer(nnx.Module):
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
-            >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
+            >>>                     external_weights = True, init_scheme = None, 
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
@@ -521,24 +635,30 @@ class SplineLayer(nnx.Module):
         
         batch = x.shape[0]
         
-        # Calculate residual activation
-        res = self.residual(x) # (batch, n_in)
-        
-        # Multiply by trainable weights
-        res_w = self.c_res.value # (n_out, n_in)
-        full_res = jnp.matmul(res, res_w.T) # (batch, n_out)
-        
         # Calculate spline basis
         Bi = self.basis(x) # (batch, n_in, G+k)
         spl = Bi.reshape(batch, -1) # (batch, n_in * (G+k))
-        
-        # Calculate spline coefficients
-        spl_w = self.c_basis.value * self.c_spl[..., None] # (n_out, n_in, G+k)
+
+        # Check if external_weights == True
+        if self.c_spl is not None:
+            spl_w = self.c_basis.value * self.c_spl[..., None] # (n_out, n_in, G+k)
+        else:
+            spl_w = self.c_basis.value
+
+        # Reshape spline coefficients
         spl_w = spl_w.reshape(self.n_out, -1) # (n_out, n_in * (G+k))
 
-        full_spl = jnp.matmul(spl, spl_w.T) # (batch, n_out)
+        y = jnp.matmul(spl, spl_w.T) # (batch, n_out)
+        
+        # Check if there is a residual function
+        if self.residual is not None:
+            # Calculate residual activation
+            res = self.residual(x) # (batch, n_in)
+        
+            # Multiply by trainable weights
+            res_w = self.c_res.value # (n_out, n_in)
+            full_res = jnp.matmul(res, res_w.T) # (batch, n_out)
 
-        # Calculate the entire activation
-        y = full_res + full_spl # (batch, n_out)
+            y += full_res # (batch, n_out)
         
         return y
