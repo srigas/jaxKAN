@@ -18,12 +18,12 @@ class FourierLayer(nnx.Module):
             Degree of Chebyshev polynomial (1st kind).
         smooth_init (bool):
             Whether to initialize Fourier coefficients with smoothening.
-        rngs (nnx.Rngs):
+        seed (int):
             Random key selection for initializations wherever necessary.
     """
     
     def __init__(self,
-                 n_in: int = 2, n_out: int = 5, k: int = 5, smooth_init: bool = True, rngs: nnx.Rngs = nnx.Rngs(42)
+                 n_in: int = 2, n_out: int = 5, k: int = 5, smooth_init: bool = True, seed: int = 42
                 ):
         """
         Initializes a FourierLayer instance.
@@ -37,17 +37,20 @@ class FourierLayer(nnx.Module):
                 Degree of Chebyshev polynomial (1st kind).
             smooth_init (bool):
                 Whether to initialize Fourier coefficients with smoothening.
-            rngs (nnx.Rngs):
+            seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, seed = 42)
         """
 
         # Setup basic parameters
         self.n_in = n_in
         self.n_out = n_out
         self.k = k
+
+        # Setup nnx rngs
+        rngs = nnx.Rngs(seed)
         
         # Fourier coefficient normalization
         norm_factor = jnp.arange(1, self.k + 1) ** 2 if smooth_init else jnp.sqrt(self.k)
@@ -79,7 +82,7 @@ class FourierLayer(nnx.Module):
                 Cosines, sines applied on inputs, shape (batch, n_in, k).
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -111,7 +114,7 @@ class FourierLayer(nnx.Module):
                 New value for the fourier sum's order.
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -162,7 +165,7 @@ class FourierLayer(nnx.Module):
                 Output of the forward pass, shape (batch, n_out).
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, rngs = nnx.Rngs(42))
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, k = 5, smooth_init = True, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)

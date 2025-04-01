@@ -21,13 +21,13 @@ class KAN(nnx.Module):
             Dictionary containing parameters required for the chosen layer type.
         add_bias (bool):
             Boolean that controls wether bias terms are also included during the forward pass or not.
-        rngs (nnx.Rngs):
+        seed (int):
             Random key selection for initializations wherever necessary.
     """
     
     def __init__(self,
                  layer_dims: List[int], layer_type: str = "base", required_parameters: Union[None, dict] = None, 
-                 add_bias: bool = True, rngs: nnx.Rngs = nnx.Rngs(42)
+                 add_bias: bool = True, seed: int = 42
                 ):
         """
         Initializes a KAN model.
@@ -41,12 +41,12 @@ class KAN(nnx.Module):
                 Dictionary containing parameters required for the chosen layer type.
             add_bias (bool):
                 Boolean that controls wether bias terms are also included during the forward pass or not.
-            rngs (nnx.Rngs):
+            seed (int):
                 Random key selection for initializations wherever necessary.
                 
         Example:
             >>> req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
-            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, add_bias = True, rngs = nnx.Rngs(42))
+            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, add_bias = True, seed = 42)
         """
                 
         self.add_bias = add_bias
@@ -63,7 +63,7 @@ class KAN(nnx.Module):
                     n_in=layer_dims[i],
                     n_out=layer_dims[i + 1],
                     **required_parameters,
-                    rngs=rngs
+                    seed=seed
                 )
                 for i in range(len(layer_dims) - 1)
             ]
@@ -85,7 +85,7 @@ class KAN(nnx.Module):
             
         Example:
             >>> req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
-            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, add_bias = True, rngs = nnx.Rngs(42))
+            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -120,7 +120,7 @@ class KAN(nnx.Module):
             
         Example:
             >>> req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
-            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, add_bias = True, rngs = nnx.Rngs(42))
+            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)

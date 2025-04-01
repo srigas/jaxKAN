@@ -16,12 +16,12 @@ class ModifiedChebyLayer(nnx.Module):
             Number of layer's outgoing nodes.
         k (int):
             Degree of Chebyshev polynomial (1st kind).
-        rngs (nnx.Rngs):
+        seed (int):
             Random key selection for initializations wherever necessary.
     """
     
     def __init__(self,
-                 n_in: int = 2, n_out: int = 5, k: int = 5, rngs: nnx.Rngs = nnx.Rngs(42)
+                 n_in: int = 2, n_out: int = 5, k: int = 5, seed: int = 42
                 ):
         """
         Initializes a ModifiedChebyLayer instance.
@@ -33,17 +33,20 @@ class ModifiedChebyLayer(nnx.Module):
                 Number of layer's outgoing nodes.
             k (int):
                 Degree of Chebyshev polynomial (1st kind).
-            rngs (nnx.Rngs):
+            seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
-            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
         """
 
         # Setup basic parameters
         self.n_in = n_in
         self.n_out = n_out
         self.k = k
+
+        # Setup nnx rngs
+        rngs = nnx.Rngs(seed)
 
         # Register and initialize the trainable parameters of the layer: c_basis, c_act
 
@@ -70,7 +73,7 @@ class ModifiedChebyLayer(nnx.Module):
                 Chebyshev basis functions applied on inputs, shape (batch, n_in, k+1).
             
         Example:
-            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -107,7 +110,7 @@ class ModifiedChebyLayer(nnx.Module):
                 New Chebyshev polynomial degree
             
         Example:
-            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -148,7 +151,7 @@ class ModifiedChebyLayer(nnx.Module):
                 Output of the forward pass, shape (batch, n_out).
             
         Example:
-            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)

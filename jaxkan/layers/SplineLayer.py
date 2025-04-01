@@ -172,7 +172,7 @@ class SplineLayer(nnx.Module):
             Power to raise the 1.0/n_in term for spline weights initialization.
         pow_res (float):
             Power to raise the 1.0/n_in term for residual weights initialization.
-        rngs (nnx.Rngs):
+        seed (int):
             Random key selection for initializations wherever necessary.
     """
     
@@ -186,7 +186,7 @@ class SplineLayer(nnx.Module):
                  pow_basis: float = 0.5,
                  pow_spline: float = 0.5,
                  pow_res: float = 0.5,
-                 rngs: nnx.Rngs = nnx.Rngs(42)
+                 seed: int = 42
                 ):
         """
         Initializes a BaseLayer instance.
@@ -218,7 +218,7 @@ class SplineLayer(nnx.Module):
                 Power to raise the 1.0/n_in term for spline weights initialization.
             pow_res (float):
                 Power to raise the 1.0/n_in term for residual weights initialization.
-            rngs (nnx.Rngs):
+            seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
@@ -226,7 +226,7 @@ class SplineLayer(nnx.Module):
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
             >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
             >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
-            >>>                     rngs = nnx.Rngs(42))
+            >>>                     seed = 42)
         """
 
         # Setup basic parameters
@@ -234,6 +234,9 @@ class SplineLayer(nnx.Module):
         self.n_out = n_out
         self.k = k
         self.residual = residual
+
+        # Setup nnx rngs
+        rngs = nnx.Rngs(seed)
 
         # Now register and initialize all parameters of the layer. Specifically:
         # grid: non-trainable variable
@@ -281,7 +284,7 @@ class SplineLayer(nnx.Module):
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
             >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
             >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
-            >>>                     rngs = nnx.Rngs(42))
+            >>>                     seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -320,7 +323,7 @@ class SplineLayer(nnx.Module):
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
             >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
             >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
-            >>>                     rngs = nnx.Rngs(42))
+            >>>                     seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -365,7 +368,7 @@ class SplineLayer(nnx.Module):
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
             >>>                     base_basis = 1.0, base_spline = 1.0, base_res = 1.0,
             >>>                     pow_basis = 0.5, pow_spline = 0.5, pow_res = 0.5, 
-            >>>                     rngs = nnx.Rngs(42))
+            >>>                     seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)

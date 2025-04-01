@@ -16,12 +16,12 @@ class ChebyLayer(nnx.Module):
             Number of layer's outgoing nodes.
         k (int):
             Degree of Chebyshev polynomial (1st kind).
-        rngs (nnx.Rngs):
+        seed (int):
             Random key selection for initializations wherever necessary.
     """
     
     def __init__(self,
-                 n_in: int = 2, n_out: int = 5, k: int = 5, rngs: nnx.Rngs = nnx.Rngs(42)
+                 n_in: int = 2, n_out: int = 5, k: int = 5, seed: int = 42
                 ):
         """
         Initializes a ChebyLayer instance.
@@ -33,17 +33,20 @@ class ChebyLayer(nnx.Module):
                 Number of layer's outgoing nodes.
             k (int):
                 Degree of Chebyshev polynomial (1st kind).
-            rngs (nnx.Rngs):
+            seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
-            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
         """
 
         # Setup basic parameters
         self.n_in = n_in
         self.n_out = n_out
         self.k = k
+
+        # Setup nnx rngs
+        rngs = nnx.Rngs(seed)
 
         # Register and initialize the trainable parameters of the layer: c_basis, c_act
 
@@ -66,11 +69,11 @@ class ChebyLayer(nnx.Module):
                 Inputs, shape (batch, n_in).
 
         Returns:
-            cheby (jnp.array):
+            x (jnp.array):
                 Chebyshev basis functions applied on inputs, shape (batch, n_in, k+1).
             
         Example:
-            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -105,7 +108,7 @@ class ChebyLayer(nnx.Module):
                 New Chebyshev polynomial degree.
             
         Example:
-            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
@@ -146,7 +149,7 @@ class ChebyLayer(nnx.Module):
                 Output of the forward pass, shape (batch, n_out).
             
         Example:
-            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, rngs = nnx.Rngs(42))
+            >>> layer = ChebyLayer(n_in = 2, n_out = 5, k = 5, seed = 42)
             >>>
             >>> key = jax.random.PRNGKey(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
