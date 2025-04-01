@@ -86,7 +86,9 @@ class BaseLayer(nnx.Module):
         self.residual = residual
 
         # Setup nnx rngs
-        rngs = nnx.Rngs(seed)
+        self.rngs = nnx.Rngs(seed)
+
+        
 
         # Initialize the grid
         self.grid = BaseGrid(n_in=n_in, n_out=n_out, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
@@ -95,7 +97,7 @@ class BaseLayer(nnx.Module):
         if external_weights == True:
             self.c_spl = nnx.Param(
             nnx.initializers.ones(
-                    rngs.params(), (self.n_out, self.n_in), jnp.float32)
+                    self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
             )
         else:
             self.c_spl = None
@@ -126,7 +128,7 @@ class BaseLayer(nnx.Module):
             >>>                   external_weights = True, init_scheme = None, 
             >>>                   seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer.basis(x_batch)
@@ -163,7 +165,6 @@ class BaseLayer(nnx.Module):
             init_scheme (Union[dict, None]):
                 Dictionary that defines how the trainable parameters of the layer are initialized. Options: "default", "lecun", "custom"
         """
-        key = jax.random.key(seed)
 
         if init_scheme is None:
             init_scheme = {"type" : "default"}
@@ -179,18 +180,19 @@ class BaseLayer(nnx.Module):
 
             if self.residual is not None:
                 c_res = nnx.initializers.glorot_uniform(in_axis=-1, out_axis=-2)(
-                    key, (self.n_out, self.n_in), jnp.float32
+                    self.rngs.params(), (self.n_out, self.n_in), jnp.float32
                 )
             
             std = init_scheme.get("std", 0.1)
             c_basis = nnx.initializers.normal(stddev=std)(
-                key, (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32
+                self.rngs.params(), (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32
             )
 
         # LeCun-like initialization, where Var[in] = Var[out]
         elif init_type == "lecun":
 
             # Generate a sample of 10^5 points
+            key = jax.random.key(seed)
             minval, maxval = self.grid_range[0], self.grid_range[-1]
             sample = jax.random.uniform(key, shape=(100000,), minval=minval, maxval=maxval)
             sample_std = sample.std().item()
@@ -214,14 +216,14 @@ class BaseLayer(nnx.Module):
 
                 std_res = sample_std/jnp.sqrt(scale*y_res_sq_mean)
 
-                c_res = nnx.initializers.normal(stddev=std_res)(key, (self.n_out, self.n_in), jnp.float32)
+                c_res = nnx.initializers.normal(stddev=std_res)(self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
             else:
                 # Variance equipartitioned across G+k terms
                 scale = self.n_in * (self.grid.G + self.k)
 
             std_b = sample_std/jnp.sqrt(scale*y_b_sq_mean)
             c_basis = nnx.initializers.normal(stddev=std_b)(
-                key, (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32
+                self.rngs.params(), (self.n_in * self.n_out, self.grid.G+self.k), jnp.float32
             )
 
         # Custom initialization, where the user inputs pre-determined arrays
@@ -254,7 +256,7 @@ class BaseLayer(nnx.Module):
             >>>                   external_weights = True, init_scheme = None, 
             >>>                   seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> layer.update_grid(x=x_batch, G_new=5)
@@ -302,7 +304,7 @@ class BaseLayer(nnx.Module):
             >>>                   external_weights = True, init_scheme = None, 
             >>>                   seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer(x_batch)
@@ -422,7 +424,7 @@ class SplineLayer(nnx.Module):
         self.residual = residual
 
         # Setup nnx rngs
-        rngs = nnx.Rngs(seed)
+        self.rngs = nnx.Rngs(seed)
 
         # Initialize the grid - shape (n_in, G+2k+1)
         self.grid = SplineGrid(n_nodes=n_in, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
@@ -431,7 +433,7 @@ class SplineLayer(nnx.Module):
         if external_weights == True:
             self.c_spl = nnx.Param(
             nnx.initializers.ones(
-                    rngs.params(), (self.n_out, self.n_in), jnp.float32)
+                    self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
             )
         else:
             self.c_spl = None
@@ -462,7 +464,7 @@ class SplineLayer(nnx.Module):
             >>>                     external_weights = True, init_scheme = None, 
             >>>                     seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer.basis(x_batch)
@@ -492,7 +494,6 @@ class SplineLayer(nnx.Module):
             init_scheme (Union[dict, None]):
                 Dictionary that defines how the trainable parameters of the layer are initialized. Options: "default", "lecun", "custom"
         """
-        key = jax.random.key(seed)
 
         if init_scheme is None:
             init_scheme = {"type" : "default"}
@@ -508,18 +509,19 @@ class SplineLayer(nnx.Module):
 
             if self.residual is not None:
                 c_res = nnx.initializers.glorot_uniform(in_axis=-1, out_axis=-2)(
-                    key, (self.n_out, self.n_in), jnp.float32
+                    self.rngs.params(), (self.n_out, self.n_in), jnp.float32
                 )
             
             std = init_scheme.get("std", 0.1)
             c_basis = nnx.initializers.normal(stddev=std)(
-                key, (self.n_out, self.n_in, self.grid.G+self.k), jnp.float32
+                self.rngs.params(), (self.n_out, self.n_in, self.grid.G+self.k), jnp.float32
             )
 
         # LeCun-like initialization, where Var[in] = Var[out]
         elif init_type == "lecun":
 
             # Generate a sample of 10^5 points
+            key = jax.random.key(seed)
             minval, maxval = self.grid_range[0], self.grid_range[-1]
             sample = jax.random.uniform(key, shape=(100000,), minval=minval, maxval=maxval)
             sample_std = sample.std().item()
@@ -543,14 +545,14 @@ class SplineLayer(nnx.Module):
 
                 std_res = sample_std/jnp.sqrt(scale*y_res_sq_mean)
 
-                c_res = nnx.initializers.normal(stddev=std_res)(key, (self.n_out, self.n_in), jnp.float32)
+                c_res = nnx.initializers.normal(stddev=std_res)(self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
             else:
                 # Variance equipartitioned across G+k terms
                 scale = self.n_in * (self.grid.G + self.k)
 
             std_b = sample_std/jnp.sqrt(scale*y_b_sq_mean)
             c_basis = nnx.initializers.normal(stddev=std_b)(
-                key, (self.n_out, self.n_in, self.grid.G+self.k), jnp.float32
+                self.rngs.params(), (self.n_out, self.n_in, self.grid.G+self.k), jnp.float32
             )
 
         # Custom initialization, where the user inputs pre-determined arrays
@@ -583,7 +585,7 @@ class SplineLayer(nnx.Module):
             >>>                     external_weights = True, init_scheme = None, 
             >>>                     seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> layer.update_grid(x=x_batch, G_new=5)
@@ -627,7 +629,7 @@ class SplineLayer(nnx.Module):
             >>>                     external_weights = True, init_scheme = None, 
             >>>                     seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer(x_batch)

@@ -75,7 +75,7 @@ class ChebyLayer(nnx.Module):
         Example:
             >>> layer = ChebyLayer(n_in = 2, n_out = 5, D = 5, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer.basis(x_batch)
@@ -110,7 +110,7 @@ class ChebyLayer(nnx.Module):
         Example:
             >>> layer = ChebyLayer(n_in = 2, n_out = 5, D = 5, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> layer.update_grid(x=x_batch, D_new=7)
@@ -151,7 +151,7 @@ class ChebyLayer(nnx.Module):
         Example:
             >>> layer = ChebyLayer(n_in = 2, n_out = 5, D = 5, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer(x_batch)
@@ -242,7 +242,7 @@ class ModifiedChebyLayer(nnx.Module):
         Example:
             >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, D = 5, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer.basis(x_batch)
@@ -279,7 +279,7 @@ class ModifiedChebyLayer(nnx.Module):
         Example:
             >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, D = 5, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> layer.update_grid(x=x_batch, D_new=7)
@@ -320,7 +320,7 @@ class ModifiedChebyLayer(nnx.Module):
         Example:
             >>> layer = ModifiedChebyLayer(n_in = 2, n_out = 5, D = 5, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer(x_batch)

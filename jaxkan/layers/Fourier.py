@@ -84,7 +84,7 @@ class FourierLayer(nnx.Module):
         Example:
             >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output_1, output_2 = layer.basis(x_batch)
@@ -116,7 +116,7 @@ class FourierLayer(nnx.Module):
         Example:
             >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> layer.update_grid(x=x_batch, D_new=7)
@@ -167,7 +167,7 @@ class FourierLayer(nnx.Module):
         Example:
             >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, seed = 42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
+            >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
             >>>
             >>> output = layer(x_batch)
