@@ -42,8 +42,8 @@ class KAN(nnx.Module):
                 Random key selection for initializations wherever necessary.
                 
         Example:
-            >>> req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
-            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, seed = 42)
+            >>> req_params = {'k': 3, 'G': 5}
+            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, seed=42)
         """
         self.layer_type = layer_type.lower()
         
@@ -74,13 +74,13 @@ class KAN(nnx.Module):
                 Size of the new grid (in terms of intervals).
             
         Example:
-            >>> req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
-            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, seed = 42)
+            >>> req_params = {'k': 3, 'G': 5}
+            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, seed=42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> key = jax.random.key(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
-            >>> model.update_grids(x=x_batch, G_new=5)
+            >>> model.update_grids(x=x_batch, G_new=10)
         """
 
         # Loop over each layer
@@ -109,11 +109,11 @@ class KAN(nnx.Module):
                 Network output, shape (batch, self.layers[-1]).
             
         Example:
-            >>> req_params = {'k': 3, 'G': 3, 'grid_range': (-1,1), 'grid_e': 0.05, 'residual': nnx.silu, 'noise_std': 0.1}
-            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, seed = 42)
+            >>> req_params = {'k': 3, 'G': 5}
+            >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, seed=42)
             >>>
-            >>> key = jax.random.PRNGKey(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> key = jax.random.key(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> output = model(x_batch)
         """

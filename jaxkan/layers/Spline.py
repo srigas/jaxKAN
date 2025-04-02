@@ -136,7 +136,7 @@ class BaseLayer(nnx.Module):
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> output = layer.basis(x_batch)
         """
@@ -264,7 +264,7 @@ class BaseLayer(nnx.Module):
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> layer.update_grid(x=x_batch, G_new=5)
         """
@@ -312,7 +312,7 @@ class BaseLayer(nnx.Module):
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> output = layer(x_batch)
         """
@@ -484,7 +484,7 @@ class SplineLayer(nnx.Module):
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> output = layer.basis(x_batch)
         """
@@ -605,7 +605,7 @@ class SplineLayer(nnx.Module):
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> layer.update_grid(x=x_batch, G_new=5)
         """
@@ -649,7 +649,7 @@ class SplineLayer(nnx.Module):
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> output = layer(x_batch)
         """
