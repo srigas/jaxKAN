@@ -36,8 +36,6 @@ class KAN(nnx.Module):
                 Type of layer to use (e.g., 'base').
             required_parameters (dict):
                 Dictionary containing parameters required for the chosen layer type.
-            add_bias (bool):
-                Boolean that controls wether bias terms are also included during the forward pass or not.
             seed (int):
                 Random key selection for initializations wherever necessary.
                 
@@ -91,9 +89,6 @@ class KAN(nnx.Module):
 
             # Perform a forward pass to get the input for the next layer
             x = layer(x)
-            
-            if self.add_bias:
-                x += self.biases[i].value
 
     
     def __call__(self, x):
