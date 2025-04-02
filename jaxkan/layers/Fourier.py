@@ -1,6 +1,9 @@
-from jax import numpy as jnp
+import jax
+import jax.numpy as jnp
 
 from flax import nnx
+
+from typing import Union
 
 from ..utils.general import solve_full_lstsq
         
@@ -15,16 +18,17 @@ class FourierLayer(nnx.Module):
         n_out (int):
             Number of layer's outgoing nodes.
         D (int):
-            Degree of Chebyshev polynomial (1st kind).
+            Order of Fourier sum.
         smooth_init (bool):
             Whether to initialize Fourier coefficients with smoothening.
+        add_bias (bool):
+            Boolean that controls wether bias terms are also included during the forward pass or not.
         seed (int):
             Random key selection for initializations wherever necessary.
     """
     
-    def __init__(self,
-                 n_in: int = 2, n_out: int = 5, D: int = 5, smooth_init: bool = True, seed: int = 42
-                ):
+    def __init__(self, n_in: int = 2, n_out: int = 5, D: int = 5,
+                 smooth_init: bool = True, add_bias: bool = True, seed: int = 42):
         """
         Initializes a FourierLayer instance.
         
@@ -34,14 +38,16 @@ class FourierLayer(nnx.Module):
             n_out (int):
                 Number of layer's outgoing nodes.
             D (int):
-                Degree of Chebyshev polynomial (1st kind).
+                Order of Fourier sum.
             smooth_init (bool):
                 Whether to initialize Fourier coefficients with smoothening.
+            add_bias (bool):
+                Boolean that controls wether bias terms are also included during the forward pass or not.
             seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, seed = 42)
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, add_bias = True, seed = 42)
         """
 
         # Setup basic parameters
@@ -51,12 +57,17 @@ class FourierLayer(nnx.Module):
 
         # Setup nnx rngs
         rngs = nnx.Rngs(seed)
+
+        # Add bias
+        if add_bias == True:
+            self.bias = nnx.Param(jnp.zeros((n_out,)))
+        else:
+            self.bias = None
         
         # Fourier coefficient normalization
         norm_factor = jnp.arange(1, self.D + 1) ** 2 if smooth_init else jnp.sqrt(self.D)
 
         # Register and initialize the trainable parameters of the layer: c_sin, c_cos
-        
         
         # Initialize with σ = 1/sqrt(n_in)
         inits = nnx.initializers.normal(stddev=1.0/jnp.sqrt(self.n_in))(
@@ -69,6 +80,7 @@ class FourierLayer(nnx.Module):
         self.c_cos = nnx.Param(inits[0,:,:,:]) # shape (n_out, n_in, D)
         self.c_sin = nnx.Param(inits[1,:,:,:]) # shape (n_out, n_in, D)
 
+    
     def basis(self, x):
         """
         Calculates the con/sin activations on the input x.
@@ -82,10 +94,10 @@ class FourierLayer(nnx.Module):
                 Cosines, sines applied on inputs, shape (batch, n_in, D).
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, seed = 42)
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> output_1, output_2 = layer.basis(x_batch)
         """
@@ -114,12 +126,12 @@ class FourierLayer(nnx.Module):
                 New value for the fourier sum's order.
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, seed = 42)
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
-            >>> layer.update_grid(x=x_batch, D_new=7)
+            >>> layer.update_grid(x=x_batch, D_new=8)
         """
 
         # Apply the inputs to the current "grid" to acquire the cosine and sine terms
@@ -165,10 +177,10 @@ class FourierLayer(nnx.Module):
                 Output of the forward pass, shape (batch, n_out).
             
         Example:
-            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, seed = 42)
+            >>> layer = FourierLayer(n_in = 2, n_out = 5, D = 5, smooth_init = True, add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.key(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> output = layer(x_batch)
         """
@@ -186,5 +198,9 @@ class FourierLayer(nnx.Module):
         # Get inner products        
         y = jnp.matmul(cosines, cos_w.T) # (batch, n_out)
         y += jnp.matmul(sines, sin_w.T) # (batch, n_out)
+
+        if self.bias is not None:
+            y += self.bias.value # (batch, n_out)
         
         return y
+        
