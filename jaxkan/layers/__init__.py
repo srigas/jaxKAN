@@ -2,6 +2,7 @@ from .Spline import BaseLayer, SplineLayer
 from .Chebyshev import ChebyshevLayer
 from .Legendre import LegendreLayer
 from .Fourier import FourierLayer
+from .RBF import RBFLayer
 
 
 def get_layer(layer_type: str):
@@ -24,7 +25,8 @@ def get_layer(layer_type: str):
         "spline": SplineLayer,
         "chebyshev": ChebyshevLayer,
         "legendre": LegendreLayer,
-        "fourier": FourierLayer
+        "fourier": FourierLayer,
+        "rbf": RBFLayer
     }
     
     if layer_type not in layer_map:

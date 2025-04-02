@@ -1,4 +1,4 @@
-from jax import numpy as jnp
+import jax.numpy as jnp
 
 
 class SplineGrid:
@@ -7,7 +7,7 @@ class SplineGrid:
 
     Attributes:
         n_nodes (int):
-                Number of layer nodes.
+            Number of layer nodes.
         k (int):
             Order of the spline basis functions.
         G (int):
@@ -48,6 +48,7 @@ class SplineGrid:
         # Initialize the grid, which is henceforth callable as .item
         self.item = self._initialize()
 
+    
     def _initialize(self):
         """
         Create and initialize the grid. Can also be used to reset a grid to the default value.
@@ -57,7 +58,7 @@ class SplineGrid:
                 Grid for the SplineLayer, shape (n_nodes, G + 2k + 1).
         
         Example:
-            >>> grid = BaseGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
+            >>> grid = SplineGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
             >>> grid.item = grid._initialize()
         """
         
@@ -73,6 +74,7 @@ class SplineGrid:
         
         return grid
 
+    
     def update(self, x, G_new):
         """
         Update the grid based on input data and new grid size.
@@ -84,8 +86,8 @@ class SplineGrid:
                 New grid size in terms of intervals.
             
         Example:
-            >>> key = jax.random.PRNGKey(42)
-            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-4.0, maxval=4.0)
+            >>> key = jax.random.key(42)
+            >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
             >>>
             >>> grid = SplineGrid(n_nodes = 2, k = 3, G = 3, grid_range = (-1,1), grid_e = 0.05)
             >>> grid.update(x=x_batch, G_new=5)
@@ -135,3 +137,4 @@ class SplineGrid:
         # Update the grid value and size
         self.item = grid.T
         self.G = G_new
+        
