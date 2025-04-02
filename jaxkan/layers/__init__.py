@@ -3,6 +3,7 @@ from .Chebyshev import ChebyshevLayer
 from .Legendre import LegendreLayer
 from .Fourier import FourierLayer
 from .RBF import RBFLayer
+from .Sine import SineLayer
 
 
 def get_layer(layer_type: str):
@@ -26,7 +27,8 @@ def get_layer(layer_type: str):
         "chebyshev": ChebyshevLayer,
         "legendre": LegendreLayer,
         "fourier": FourierLayer,
-        "rbf": RBFLayer
+        "rbf": RBFLayer,
+        "sine": SineLayer
     }
     
     if layer_type not in layer_map:
