@@ -34,6 +34,8 @@ class BaseLayer(nnx.Module):
             Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
         init_scheme (Union[dict, None]):
             Dictionary that defines how the trainable parameters of the layer are initialized.
+        add_bias (bool):
+            Boolean that controls wether bias terms are also included during the forward pass or not.
         seed (int):
             Random key selection for initializations wherever necessary.
     """
@@ -42,9 +44,8 @@ class BaseLayer(nnx.Module):
                  n_in: int = 2, n_out: int = 5, k: int = 3,
                  G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05,
                  residual: Union[nnx.Module, None] = nnx.silu,
-                 external_weights: bool = True,
-                 init_scheme: Union[dict, None] = None,
-                 seed: int = 42
+                 external_weights: bool = True, init_scheme: Union[dict, None] = None,
+                 add_bias: bool = True, seed: int = 42
                 ):
         """
         Initializes a BaseLayer instance.
@@ -68,13 +69,15 @@ class BaseLayer(nnx.Module):
                 Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
             init_scheme (Union[dict, None]):
                 Dictionary that defines how the trainable parameters of the layer are initialized.
+            add_bias (bool):
+                Boolean that controls wether bias terms are also included during the forward pass or not.
             seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   external_weights = True, init_scheme = None, 
+            >>>                   external_weights = True, init_scheme = None, add_bias = True,
             >>>                   seed = 42)
         """
 
@@ -87,8 +90,6 @@ class BaseLayer(nnx.Module):
 
         # Setup nnx rngs
         self.rngs = nnx.Rngs(seed)
-
-        
 
         # Initialize the grid
         self.grid = BaseGrid(n_in=n_in, n_out=n_out, k=k, G=G, grid_range=grid_range, grid_e=grid_e)
@@ -110,6 +111,12 @@ class BaseLayer(nnx.Module):
         if residual is not None:
             self.c_res = nnx.Param(c_res)
 
+        # Add bias
+        if add_bias == True:
+            self.bias = nnx.Param(jnp.zeros((n_out,)))
+        else:
+            self.bias = None
+
     def basis(self, x):
         """
         Uses k and the current grid to calculate the values of spline basis functions on the input.
@@ -125,7 +132,7 @@ class BaseLayer(nnx.Module):
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   external_weights = True, init_scheme = None, 
+            >>>                   external_weights = True, init_scheme = None, add_bias = True,
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.key(42)
@@ -253,7 +260,7 @@ class BaseLayer(nnx.Module):
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   external_weights = True, init_scheme = None, 
+            >>>                   external_weights = True, init_scheme = None, add_bias = True,
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.key(42)
@@ -301,7 +308,7 @@ class BaseLayer(nnx.Module):
         Example:
             >>> layer = BaseLayer(n_in = 2, n_out = 5, k = 3,
             >>>                   G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                   external_weights = True, init_scheme = None, 
+            >>>                   external_weights = True, init_scheme = None, add_bias = True,
             >>>                   seed = 42)
             >>>
             >>> key = jax.random.key(42)
@@ -342,9 +349,12 @@ class BaseLayer(nnx.Module):
             # Calculate the entire activation
             y += cnst_res * res # (batch, n_in*n_out)
         
-        # Reshape and sum to cast to (batch, n_out) shape
+        # Reshape and sum
         y_reshaped = jnp.reshape(y, (batch, self.n_out, self.n_in))
-        y = jnp.sum(y_reshaped, axis=2)
+        y = jnp.sum(y_reshaped, axis=2)  # (batch, n_out)
+
+        if self.bias is not None:
+            y += self.bias.value  # (batch, n_out)
         
         return y
 
@@ -372,6 +382,8 @@ class SplineLayer(nnx.Module):
             Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
         init_scheme (Union[dict, None]):
             Dictionary that defines how the trainable parameters of the layer are initialized.
+        add_bias (bool):
+            Boolean that controls wether bias terms are also included during the forward pass or not.
         seed (int):
             Random key selection for initializations wherever necessary.
     """
@@ -380,9 +392,8 @@ class SplineLayer(nnx.Module):
                  n_in: int = 2, n_out: int = 5, k: int = 3,
                  G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05,
                  residual: Union[nnx.Module, None] = nnx.silu,
-                 external_weights: bool = True,
-                 init_scheme: Union[dict, None] = None,
-                 seed: int = 42
+                 external_weights: bool = True, init_scheme: Union[dict, None] = None,
+                 add_bias: bool = True, seed: int = 42
                 ):
         """
         Initializes a BaseLayer instance.
@@ -406,13 +417,15 @@ class SplineLayer(nnx.Module):
                 Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
             init_scheme (Union[dict, None]):
                 Dictionary that defines how the trainable parameters of the layer are initialized.
+            add_bias (bool):
+                Boolean that controls wether bias terms are also included during the forward pass or not.
             seed (int):
                 Random key selection for initializations wherever necessary.
             
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     external_weights = True, init_scheme = None, 
+            >>>                     external_weights = True, init_scheme = None, add_bias = True,
             >>>                     seed = 42)
         """
 
@@ -446,6 +459,12 @@ class SplineLayer(nnx.Module):
         if residual is not None:
             self.c_res = nnx.Param(c_res)
 
+        # Add bias
+        if add_bias == True:
+            self.bias = nnx.Param(jnp.zeros((n_out,)))
+        else:
+            self.bias = None
+
     def basis(self, x):
         """
         Uses k and the current grid to calculate the values of spline basis functions on the input.
@@ -461,7 +480,7 @@ class SplineLayer(nnx.Module):
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     external_weights = True, init_scheme = None, 
+            >>>                     external_weights = True, init_scheme = None, add_bias = True,
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.key(42)
@@ -582,7 +601,7 @@ class SplineLayer(nnx.Module):
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     external_weights = True, init_scheme = None, 
+            >>>                     external_weights = True, init_scheme = None, add_bias = True,
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.key(42)
@@ -626,7 +645,7 @@ class SplineLayer(nnx.Module):
         Example:
             >>> layer = SplineLayer(n_in = 2, n_out = 5, k = 3,
             >>>                     G = 3, grid_range = (-1,1), grid_e = 0.05, residual = nnx.silu,
-            >>>                     external_weights = True, init_scheme = None, 
+            >>>                     external_weights = True, init_scheme = None, add_bias = True,
             >>>                     seed = 42)
             >>>
             >>> key = jax.random.key(42)
@@ -662,5 +681,8 @@ class SplineLayer(nnx.Module):
             full_res = jnp.matmul(res, res_w.T) # (batch, n_out)
 
             y += full_res # (batch, n_out)
+
+        if self.bias is not None:
+            y += self.bias.value  # (batch, n_out)
         
         return y
