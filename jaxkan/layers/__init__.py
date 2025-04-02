@@ -1,5 +1,5 @@
 from .Spline import BaseLayer, SplineLayer
-from .Chebyshev import ChebyLayer, ModifiedChebyLayer
+from .Chebyshev import ChebyshevLayer
 from .Fourier import FourierLayer
 
 
@@ -21,8 +21,7 @@ def get_layer(layer_type: str):
     layer_map = {
         "base": BaseLayer,
         "spline": SplineLayer,
-        "cheby": ChebyLayer,
-        "mod-cheby": ModifiedChebyLayer,
+        "chebyshev": ChebyshevLayer,
         "fourier": FourierLayer
     }
     

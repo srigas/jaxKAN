@@ -97,7 +97,7 @@ class BaseLayer(nnx.Module):
         # If external_weights == True, we initialize weights for the spline functions equal to unity
         if external_weights == True:
             self.c_spl = nnx.Param(
-            nnx.initializers.ones(
+                nnx.initializers.ones(
                     self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
             )
         else:
@@ -222,8 +222,8 @@ class BaseLayer(nnx.Module):
                 y_res_sq_mean = y_res_sq.mean().item()
 
                 std_res = sample_std/jnp.sqrt(scale*y_res_sq_mean)
-
                 c_res = nnx.initializers.normal(stddev=std_res)(self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
+            
             else:
                 # Variance equipartitioned across G+k terms
                 scale = self.n_in * (self.grid.G + self.k)
@@ -445,7 +445,7 @@ class SplineLayer(nnx.Module):
         # If external_weights == True, we initialize weights for the spline functions equal to unity
         if external_weights == True:
             self.c_spl = nnx.Param(
-            nnx.initializers.ones(
+                nnx.initializers.ones(
                     self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
             )
         else:
@@ -563,8 +563,8 @@ class SplineLayer(nnx.Module):
                 y_res_sq_mean = y_res_sq.mean().item()
 
                 std_res = sample_std/jnp.sqrt(scale*y_res_sq_mean)
-
                 c_res = nnx.initializers.normal(stddev=std_res)(self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
+            
             else:
                 # Variance equipartitioned across G+k terms
                 scale = self.n_in * (self.grid.G + self.k)
@@ -686,3 +686,4 @@ class SplineLayer(nnx.Module):
             y += self.bias.value  # (batch, n_out)
         
         return y
+        
