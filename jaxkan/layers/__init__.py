@@ -1,5 +1,6 @@
 from .Spline import BaseLayer, SplineLayer
 from .Chebyshev import ChebyshevLayer
+from .Legendre import LegendreLayer
 from .Fourier import FourierLayer
 
 
@@ -22,6 +23,7 @@ def get_layer(layer_type: str):
         "base": BaseLayer,
         "spline": SplineLayer,
         "chebyshev": ChebyshevLayer,
+        "legendre": LegendreLayer,
         "fourier": FourierLayer
     }
     

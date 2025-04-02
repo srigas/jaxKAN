@@ -5,15 +5,14 @@ from flax import nnx
 
 from typing import Union
 
-from ..utils.polynomials import Cb
+from ..utils.polynomials import Lg
 from ..utils.general import solve_full_lstsq
         
         
-class ChebyshevLayer(nnx.Module):
+class LegendreLayer(nnx.Module):
     """
-    ChebyshevLayer class. Corresponds to the Chebyshev version of KANs and comes in three "flavors":
-        "default": the version presented in https://arxiv.org/pdf/2405.07200
-        "modified": the version presented in https://www.sciencedirect.com/science/article/pii/S0045782524005462
+    LegendreLayer class. Corresponds to the Legendre version of KANs and comes in two "flavors":
+        "default": uses the recursion formula to calculate polynomials up to arbitrary degree
         "exact": uses pre-defined functions for higher efficiency, but cannot scale up to arbitrary degrees
 
     Attributes:
@@ -22,7 +21,7 @@ class ChebyshevLayer(nnx.Module):
         n_out (int):
             Number of layer's outgoing nodes.
         D (int):
-            Degree of Chebyshev polynomial (1st kind).
+            Degree of Legendre polynomial.
         flavor (Union[str, None]):
             One of "default", "modified", or "exact" - chooses basis implementation.
         residual (Union[nnx.Module, None]):
@@ -41,7 +40,7 @@ class ChebyshevLayer(nnx.Module):
                  residual: Union[nnx.Module, None] = None, external_weights: bool = False,
                  init_scheme: Union[dict, None] = None, add_bias: bool = True, seed: int = 42):
         """
-        Initializes a ChebyshevLayer instance.
+        Initializes a LegendreLayer instance.
         
         Args:
             n_in (int):
@@ -49,7 +48,7 @@ class ChebyshevLayer(nnx.Module):
             n_out (int):
                 Number of layer's outgoing nodes.
             D (int):
-                Degree of Chebyshev polynomial (1st kind).
+                Degree of Legendre polynomial.
             flavor (Union[str, None]):
                 One of "default", "modified", or "exact" - chooses basis implementation.
             residual (Union[nnx.Module, None]):
@@ -64,14 +63,14 @@ class ChebyshevLayer(nnx.Module):
                 Random key selection for initializations wherever necessary.
             
         Example:
-            >>> layer = ChebyshevLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
-            >>>                        residual = None, external_weights = False, init_scheme = None,
-            >>>                        add_bias = True, seed = 42)
+            >>> layer = LegendreLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
+            >>>                       residual = None, external_weights = False, init_scheme = None,
+            >>>                       add_bias = True, seed = 42)
         """
         if flavor is None:
             flavor = "default"
         elif flavor == "exact":
-            max_deg = max(list(Cb.keys()))
+            max_deg = max(list(Lg.keys()))
             if D > max_deg:
                 raise ValueError(f"For method 'exact', the maximum degree cannot exceed {max_deg}.")
 
@@ -111,20 +110,20 @@ class ChebyshevLayer(nnx.Module):
 
     def basis(self, x):
         """
-        Based on the degree and flavor, the values of the Chebyshev basis functions are calculated on the input.
+        Based on the degree and flavor, the values of the Legendre basis functions are calculated on the input.
 
         Args:
             x (jnp.array):
                 Inputs, shape (batch, n_in).
 
         Returns:
-            cheb (jnp.array):
-                Chebyshev basis functions applied on inputs, shape (batch, n_in, D+1).
+            leg (jnp.array):
+                Legendre basis functions applied on inputs, shape (batch, n_in, D+1).
             
         Example:
-            >>> layer = ChebyshevLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
-            >>>                        residual = None, external_weights = False, init_scheme = None,
-            >>>                        add_bias = True, seed = 42)
+            >>> layer = LegendreLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
+            >>>                       residual = None, external_weights = False, init_scheme = None,
+            >>>                       add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
@@ -137,25 +136,17 @@ class ChebyshevLayer(nnx.Module):
 
         # Default implementation
         if self.flavor == "default":
-            x = jnp.expand_dims(x, axis=-1) # (batch, n_in, 1)
-            x = jnp.tile(x, (1, 1, self.D + 1)) # (batch, n_in, D+1)
-            x = jnp.arccos(x) # (batch, n_in, D+1)
-            x *= jnp.arange(self.D+1) # (batch, n_in, D+1)
-            cheb = jnp.cos(x) # (batch, n_in, D+1)
-            
-        # Modified implementation
-        elif self.flavor == "modified":
             # Order 0 is set by default, since we initialize at 1
-            cheb = jnp.ones((batch, self.n_in, self.D+1))
+            leg = jnp.ones((batch, self.n_in, self.D+1))
             # Set order 1 as well
-            cheb = cheb.at[:, :, 1].set(x)
+            leg = leg.at[:, :, 1].set(x)
             # Handle higher orders iteratively
-            for K in range(2, self.D+1):
-                cheb = cheb.at[:, :, K].set(2 * x * cheb[:, :, K - 1] - cheb[:, :, K - 2])
+            for n in range(1, self.D):
+                leg = leg.at[:, :, n+1].set(((2 * n + 1) * x * leg[:, :, n] - n * leg[:, :, n-1]) / (n + 1))
 
         # Exact calculation of polynomials
         elif self.flavor == "exact":
-            cheb = jnp.stack([Cb[i](x) for i in range(self.D + 1)], axis=-1)  # (batch, n_in, D+1)
+            leg = jnp.stack([Lg[i](x) for i in range(self.D + 1)], axis=-1)  # (batch, n_in, D+1)
 
         # Other flavor
         else:
@@ -163,9 +154,9 @@ class ChebyshevLayer(nnx.Module):
 
         # Exclude the constant "1" dimension if bias is included
         if self.bias is not None:
-            return cheb[:, :, 1:]
+            return leg[:, :, 1:]
         else:
-            return cheb
+            return leg
 
 
     def _initialize_params(self, init_scheme, seed):
@@ -255,18 +246,18 @@ class ChebyshevLayer(nnx.Module):
 
     def update_grid(self, x, D_new):
         """
-        For the case of ChebyKANs there is no concept of grid. However, a fine-graining approach can be followed by progressively increasing the degree of the polynomials.
+        For the case of LegendreKANs there is no concept of grid. However, a fine-graining approach can be followed by progressively increasing the degree of the polynomials.
 
         Args:
             x (jnp.array):
                 Inputs, shape (batch, n_in).
             D_new (int):
-                New Chebyshev polynomial degree.
+                New Legendre polynomial degree.
             
         Example:
-            >>> layer = ChebyshevLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
-            >>>                        residual = None, external_weights = False, init_scheme = None,
-            >>>                        add_bias = True, seed = 42)
+            >>> layer = LegendreLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
+            >>>                       residual = None, external_weights = False, init_scheme = None,
+            >>>                       add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
@@ -275,7 +266,7 @@ class ChebyshevLayer(nnx.Module):
         """
 
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
-        # the current coefficients and Bi(x) are the current Chebyshev basis functions
+        # the current coefficients and Bi(x) are the current Legendre basis functions
         Bi = self.basis(x).transpose(1, 0, 2) # (n_in, batch, D+1)
         ci = self.c_basis.value.transpose(1, 2, 0) # (n_in, D+1, n_out)
         ciBi = jnp.einsum('ijk,ikm->ijm', Bi, ci) # (n_in, batch, n_out)
@@ -307,9 +298,9 @@ class ChebyshevLayer(nnx.Module):
                 Output of the forward pass, shape (batch, n_out).
             
         Example:
-            >>> layer = ChebyshevLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
-            >>>                        residual = None, external_weights = False, init_scheme = None,
-            >>>                        add_bias = True, seed = 42)
+            >>> layer = LegendreLayer(n_in = 2, n_out = 5, D = 5, flavor = "default", 
+            >>>                       residual = None, external_weights = False, init_scheme = None,
+            >>>                       add_bias = True, seed = 42)
             >>>
             >>> key = jax.random.key(42)
             >>> x_batch = jax.random.uniform(key, shape=(100, 2), minval=-1.0, maxval=1.0)
