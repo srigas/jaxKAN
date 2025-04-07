@@ -22,7 +22,7 @@ def seed():
 
 @pytest.fixture
 def req_params():
-    return {'k': 5}
+    return {'D': 5, 'flavor': 'exact'}
     
 
 def test_function_fitting(seed, req_params):
@@ -45,17 +45,16 @@ def test_function_fitting(seed, req_params):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed)
     
     assert X_train.shape == (800, 2), "Incorrect X_train shape after splitting the data"
-    assert X_test.shape == (200, 2), "Incorrect X_tesn shape after splitting the data"
+    assert X_test.shape == (200, 2), "Incorrect X_test shape after splitting the data"
 
     # Initialize the model
     n_in, n_out, n_hidden = X_train.shape[1], y_train.shape[1], 6    
     layer_dims = [n_in, n_hidden, n_hidden, n_out]
     
     model = KAN(layer_dims = layer_dims,
-                layer_type = 'cheby',
+                layer_type = 'chebyshev',
                 required_parameters = req_params,
-                add_bias = True,
-                rngs = nnx.Rngs(seed)
+                seed = seed
                )
 
     # Initialize optimizer
@@ -116,10 +115,9 @@ def test_pde_solving(seed, req_params):
     layer_dims = [n_in, n_hidden, n_hidden, n_out]
     
     model = KAN(layer_dims = layer_dims,
-                layer_type = 'mod-cheby',
+                layer_type = 'chebyshev',
                 required_parameters = req_params,
-                add_bias = True,
-                rngs = nnx.Rngs(seed)
+                seed = seed
                )
 
     # Initialize optimizer

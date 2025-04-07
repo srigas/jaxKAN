@@ -1,8 +1,10 @@
-from .BaseLayer import BaseLayer
-from .SplineLayer import SplineLayer
-from .ChebyLayer import ChebyLayer
-from .ModifiedChebyLayer import ModifiedChebyLayer
-from .FourierLayer import FourierLayer
+from .Spline import BaseLayer, SplineLayer
+from .Chebyshev import ChebyshevLayer
+from .Legendre import LegendreLayer
+from .Fourier import FourierLayer
+from .RBF import RBFLayer
+from .Sine import SineLayer
+
 
 def get_layer(layer_type: str):
     """
@@ -22,9 +24,11 @@ def get_layer(layer_type: str):
     layer_map = {
         "base": BaseLayer,
         "spline": SplineLayer,
-        "cheby": ChebyLayer,
-        "mod-cheby": ModifiedChebyLayer,
-        "fourier": FourierLayer
+        "chebyshev": ChebyshevLayer,
+        "legendre": LegendreLayer,
+        "fourier": FourierLayer,
+        "rbf": RBFLayer,
+        "sine": SineLayer
     }
     
     if layer_type not in layer_map:
