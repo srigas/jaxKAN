@@ -4,84 +4,84 @@ import jax
 import jax.numpy as jnp
 from flax import nnx
 
-from jaxkan.layers.FourierLayer import FourierLayer
+from jaxkan.layers.Fourier import FourierLayer
 
 
 @pytest.fixture
-def rng():
-    return nnx.Rngs(42)
-
-
-@pytest.fixture
-def x(rng):
-    return jax.random.uniform(rng.params(), shape=(10, 2))  # Batch size of 10, n_in=2
-
+def seed():
+    return 42
 
 @pytest.fixture
-def fourier_params():
+def x(seed):
+    key = jax.random.key(seed)
+    return jax.random.uniform(key, shape=(10, 2))
+
+@pytest.fixture
+def model_params():
     return {
         "n_in": 2,
         "n_out": 5,
-        "k": 8,
+        "D": 8,
         "smooth_init": True
     }
 
-
 @pytest.fixture
-def fourier_layer(rng, fourier_params):
-    return FourierLayer(**fourier_params, rngs=rng)
+def fourier_layer(seed, model_params):
+    return FourierLayer(**model_params, seed=seed)
 
 
 # Tests
-def test_fourier_layer_initialization(fourier_layer, fourier_params):
+def test_fourier_layer_initialization(fourier_layer, model_params):
     
-    assert fourier_layer.n_in == fourier_params["n_in"], "FourierLayer n_in not set correctly"
-    assert fourier_layer.n_out == fourier_params["n_out"], "FourierLayer n_out not set correctly"
+    assert fourier_layer.n_in == model_params["n_in"], "FourierLayer n_in not set correctly"
+    assert fourier_layer.n_out == model_params["n_out"], "FourierLayer n_out not set correctly"
     assert fourier_layer.c_cos.value.shape == (
-        fourier_params["n_out"],
-        fourier_params["n_in"],
-        fourier_params["k"]
+        model_params["n_out"],
+        model_params["n_in"],
+        model_params["D"]
     ), "FourierLayer c_cos shape incorrect"
     assert fourier_layer.c_sin.value.shape == (
-        fourier_params["n_out"],
-        fourier_params["n_in"],
-        fourier_params["k"]
+        model_params["n_out"],
+        model_params["n_in"],
+        model_params["D"]
     ), "FourierLayer c_sin shape incorrect"
 
 
-def test_fourier_layer_forward_pass(rng, x, fourier_params):
+def test_fourier_layer_forward_pass(seed, x, model_params):
     
-    fourier_params["smooth_init"] = False
-    layer = FourierLayer(**fourier_params, rngs=rng)
+    model_params["smooth_init"] = False
+    layer = FourierLayer(**model_params, seed=seed)
     y = layer(x)
     batch = x.shape[0]
 
-    assert y.shape == (batch, fourier_params["n_out"]), "FourierLayer forward pass returned incorrect shape"
+    assert y.shape == (batch, model_params["n_out"]), "FourierLayer forward pass returned incorrect shape"
 
 
 def test_fourier_layer_order_update(fourier_layer, x):
     
-    k_new = 10
+    D_new = 10
     
-    initial_order = fourier_layer.k
-    fourier_layer.update_grid(x, k_new)
-    updated_order = fourier_layer.k
+    initial_order = fourier_layer.D
+    fourier_layer.update_grid(x, D_new)
+    updated_order = fourier_layer.D
 
     assert initial_order != updated_order, "FourierLayer order update failed"
-    assert updated_order == k_new, "FourierLayer order update did not set the new order correctly"
+    assert updated_order == D_new, "FourierLayer order update did not set the new order correctly"
 
 
-@pytest.mark.parametrize("n_in, n_out, k", [
+@pytest.mark.parametrize("n_in, n_out, D", [
     (2, 5, 4),
     (1, 1, 1),
     (3, 10, 6),
 ])
-def test_fourier_layer_varied_configs(rng, n_in, n_out, k):
+def test_fourier_layer_varied_configs(seed, n_in, n_out, D):
+
+    key = jax.random.key(seed)
     
-    x = jax.random.uniform(rng.params(), shape=(10, n_in))
+    x = jax.random.uniform(key, shape=(10, n_in))
     
-    layer = FourierLayer(n_in=n_in, n_out=n_out, k=k, smooth_init=True, rngs=rng)
+    layer = FourierLayer(n_in=n_in, n_out=n_out, D=D, smooth_init=True, seed=seed)
     
     y = layer(x)
     
-    assert y.shape == (x.shape[0], n_out), f"Forward pass returned incorrect shape for n_in={n_in}, n_out={n_out}, k={k}"
+    assert y.shape == (x.shape[0], n_out), f"Forward pass returned incorrect shape for n_in={n_in}, n_out={n_out}, D={D}"

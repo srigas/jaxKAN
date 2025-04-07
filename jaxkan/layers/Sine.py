@@ -233,7 +233,7 @@ class SineLayer(nnx.Module):
 
     def update_grid(self, x, D_new):
         """
-        For the case of sine-based KANs there is no concept of grid. However, a fine-graining approach can be followed by progressively increasing the number of basis functions.
+        For the case of sine-based KANs there is no concept of grid. However, a fine-graining approach can be followed by progressively increasing the number of basis functions, and by extension phases and omegas.
 
         Args:
             x (jnp.array):
@@ -250,22 +250,29 @@ class SineLayer(nnx.Module):
             >>>
             >>> layer.update_grid(x=x_batch, D_new=8)
         """
-
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
-        # the current coefficients and Bi(x) are the current Legendre basis functions
-        Bi = self.basis(x).transpose(1, 0, 2) # (n_in, batch, D+1)
-        ci = self.c_basis.value.transpose(1, 2, 0) # (n_in, D+1, n_out)
+        # the current coefficients and Bi(x) are the current Sine basis functions
+        Bi = self.basis(x).transpose(1, 0, 2) # (n_in, batch, D)
+        ci = self.c_basis.value.transpose(1, 2, 0) # (n_in, D, n_out)
         ciBi = jnp.einsum('ijk,ikm->ijm', Bi, ci) # (n_in, batch, n_out)
 
         # Update the degree order
         self.D = D_new
 
+        # Re-initialize omega and phases to correspond to new D value
+        self.omega = nnx.Param(
+            nnx.initializers.normal(stddev = 1.0)(
+                self.rngs.params(), (D_new, 1), jnp.float32)
+        )
+
+        self.phase = nnx.Param(jnp.zeros((D_new, 1)))
+
         # Get the Bj(x) for the degree order
-        Bj = self.basis(x).transpose(1, 0, 2) # (n_in, batch, D_new+1)
+        Bj = self.basis(x).transpose(1, 0, 2) # (n_in, batch, D_new)
 
         # Solve for the new coefficients
-        cj = solve_full_lstsq(Bj, ciBi) # (n_in, D_new+1, n_out)
-        # Cast into shape (n_out, n_in, D_new+1)
+        cj = solve_full_lstsq(Bj, ciBi) # (n_in, D_new, n_out)
+        # Cast into shape (n_out, n_in, D_new)
         cj = cj.transpose(2, 0, 1)
 
         self.c_basis = nnx.Param(cj)

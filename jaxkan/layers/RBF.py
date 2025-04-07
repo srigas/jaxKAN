@@ -20,7 +20,7 @@ class RBFLayer(nnx.Module):
             Number of layer's outgoing nodes.
         D (int):
             Number of basis functions.
-        kernel (Union[str, None]):
+        kernel (Union[dict, None]):
             Kernel to be used for the RBFs.
         grid_range (tuple):
             An initial range for the grid's ends, although adaptivity can completely change it.
@@ -38,7 +38,7 @@ class RBFLayer(nnx.Module):
             Random key selection for initializations wherever necessary.
     """
     
-    def __init__(self, n_in: int = 2, n_out: int = 5, D: int = 5, kernel: Union[str, None] = None,
+    def __init__(self, n_in: int = 2, n_out: int = 5, D: int = 5, kernel: Union[dict, None] = None,
                  grid_range: tuple = (-2.0, 2.0), grid_e: float = 1.0,
                  residual: Union[nnx.Module, None] = None, external_weights: bool = False,
                  init_scheme: Union[dict, None] = None, add_bias: bool = True, seed: int = 42):
@@ -52,7 +52,7 @@ class RBFLayer(nnx.Module):
                 Number of layer's outgoing nodes.
             D (int):
                 Number of basis functions.
-            kernel (Union[str, None]):
+            kernel (Union[dict, None]):
                 Kernel to be used for the RBFs.
             grid_range (tuple):
                 An initial range for the grid's ends, although adaptivity can completely change it.
@@ -277,6 +277,7 @@ class RBFLayer(nnx.Module):
         cj = cj.transpose(2, 0, 1)
 
         self.c_basis = nnx.Param(cj)
+        self.D = D_new
 
 
     def __call__(self, x):

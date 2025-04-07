@@ -52,7 +52,7 @@ def pde_loss():
 
 @pytest.fixture
 def model():
-    return KAN([2, 6, 1], 'spline', {}, True)
+    return KAN([2, 6, 1], 'spline', {}, 42)
 
 
 @pytest.fixture
