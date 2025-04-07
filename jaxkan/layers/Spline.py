@@ -197,6 +197,7 @@ class BaseLayer(nnx.Module):
 
         # LeCun-like initialization, where Var[in] = Var[out]
         elif init_type == "lecun":
+            # Thanks are owed to Verma Dhruv for collaborating on this initialization type
 
             # Generate a sample of 10^5 points
             key = jax.random.key(seed)
