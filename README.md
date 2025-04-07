@@ -1,3 +1,4 @@
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07830/status.svg)](https://doi.org/10.21105/joss.07830)
 [![Doc](https://img.shields.io/badge/docs-dev-blue.svg)](https://jaxkan.readthedocs.io/)
 [![License](https://img.shields.io/github/license/srigas/jaxkan)](https://github.com/srigas/jaxKAN/blob/main/LICENSE)
 [![Run Tests](https://github.com/srigas/jaxKAN/actions/workflows/test.yml/badge.svg)](https://github.com/srigas/jaxKAN/actions/workflows/test.yml)
@@ -20,13 +21,28 @@ We warmly welcome community contributions to jaxKAN! For details on the types of
 
 ## Citation
 
-There is a JOSS paper currently submitted under review for jaxKAN. Until it is published, if you utilized `jaxKAN` for your own academic work, please consider using the following citation, which is the paper in which the framework was first introduced for PIKANs:
+If you utilized `jaxKAN` for your own academic work, please use the following citation:
+
+```
+@article{Rigas2025,
+      author = {Rigas, Spyros and Papachristou, Michalis},
+      title = {jax{KAN}: A unified {JAX} framework for {K}olmogorov-{A}rnold Networks},
+      journal = {Journal of Open Source Software},
+      year = {2025},
+      volume = {10},
+      number = {108},
+      pages = {7830},
+      doi = {10.21105/joss.07830}
+}
+```
+
+If you have used jaxKAN in your research for PIKAN-related applications or theoretical developments, please consider also citing the paper that originally introduced jaxKAN for these tasks:
 
 ```
 @article{10763509,
       author = {Rigas, Spyros and Papachristou, Michalis and Papadopoulos, Theofilos and Anagnostopoulos, Fotios and Alexandridis, Georgios},
-      journal = {IEEE Access}, 
-      title = {Adaptive Training of Grid-Dependent Physics-Informed Kolmogorov-Arnold Networks}, 
+      title = {Adaptive Training of Grid-Dependent Physics-Informed {K}olmogorov-{A}rnold Networks}, 
+      journal = {IEEE Access},
       year = {2024},
       volume = {12},
       pages = {176982-176998},
