@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jaxkan"
-version = "0.2.6"
+version = "0.2.8"
 description = "A JAX implementation of Kolmogorov-Arnold Networks"
 readme = "README.md"
 keywords = ["JAX", "NNX", "KANs", "Kolmogorov-Arnold", "PIKAN"]
