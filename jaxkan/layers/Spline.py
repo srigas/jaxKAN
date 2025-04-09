@@ -235,11 +235,16 @@ class BaseLayer(nnx.Module):
             if distrib is None:
                 distrib = "uniform"
 
-            # Generate a sample of 10^5 points
+            sample_size = init_scheme.get("sample_size", 10000)
+
+            if sample_size is None:
+                sample_size = 10000
+
+            # Generate a sample of points
             if distrib == "uniform":
-                sample = jax.random.uniform(key, shape=(100000,), minval=-1.0, maxval=1.0)
+                sample = jax.random.uniform(key, shape=(sample_size,), minval=-1.0, maxval=1.0)
             elif distrib == "normal":
-                sample = jax.random.normal(key, shape=(100000,))
+                sample = jax.random.normal(key, shape=(sample_size,))
 
             # Finally get gain
             gain = init_scheme.get("gain", None)
@@ -286,11 +291,16 @@ class BaseLayer(nnx.Module):
             if distrib is None:
                 distrib = "uniform"
 
-            # Generate a sample of 10^5 points
+            sample_size = init_scheme.get("sample_size", 10000)
+
+            if sample_size is None:
+                sample_size = 10000
+
+            # Generate a sample of points
             if distrib == "uniform":
-                sample = jax.random.uniform(key, shape=(100000,), minval=-1.0, maxval=1.0)
+                sample = jax.random.uniform(key, shape=(sample_size,), minval=-1.0, maxval=1.0)
             elif distrib == "normal":
-                sample = jax.random.normal(key, shape=(100000,))
+                sample = jax.random.normal(key, shape=(sample_size,))
 
             # Finally get gain
             gain = init_scheme.get("gain", None)
@@ -708,11 +718,16 @@ class SplineLayer(nnx.Module):
             # Also get distribution type
             distrib = init_scheme.get("distribution", "uniform")
 
-            # Generate a sample of 10^5 points
+            sample_size = init_scheme.get("sample_size", 10000)
+
+            if sample_size is None:
+                sample_size = 10000
+
+            # Generate a sample of points
             if distrib == "uniform":
-                sample = jax.random.uniform(key, shape=(100000,), minval=-1.0, maxval=1.0)
+                sample = jax.random.uniform(key, shape=(sample_size,), minval=-1.0, maxval=1.0)
             elif distrib == "normal":
-                sample = jax.random.normal(key, shape=(100000,))
+                sample = jax.random.normal(key, shape=(sample_size,))
 
             # Finally get gain
             gain = init_scheme.get("gain", None)
@@ -756,11 +771,16 @@ class SplineLayer(nnx.Module):
             # Also get distribution type
             distrib = init_scheme.get("distribution", "uniform")
 
-            # Generate a sample of 10^5 points
+            sample_size = init_scheme.get("sample_size", 10000)
+
+            if sample_size is None:
+                sample_size = 10000
+
+            # Generate a sample of points
             if distrib == "uniform":
-                sample = jax.random.uniform(key, shape=(100000,), minval=-1.0, maxval=1.0)
+                sample = jax.random.uniform(key, shape=(sample_size,), minval=-1.0, maxval=1.0)
             elif distrib == "normal":
-                sample = jax.random.normal(key, shape=(100000,))
+                sample = jax.random.normal(key, shape=(sample_size,))
 
             # Finally get gain
             gain = init_scheme.get("gain", None)
