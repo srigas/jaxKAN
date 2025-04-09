@@ -313,7 +313,7 @@ class SineLayer(nnx.Module):
             jac_basis = jax.jacobian(basis_scalar)
 
             # Use jax.vmap twice to vectorize over batch and n_in.
-            grad_basis = jax.vmap(jax.vmap(jac_basis))(sample_ext)
+            grad_basis = jax.vmap(jac_basis)(sample)
             # ------------------------------------------------------------
             
             # Calculate E[B_m^2(x)]
