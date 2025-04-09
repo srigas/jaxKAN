@@ -186,6 +186,34 @@ class RBFLayer(nnx.Module):
                 self.rngs.params(), (self.n_out, self.n_in, self.D), jnp.float32
             )
 
+        # Custom power law initialization
+        # c_basis ~ N(0, s_b), s_b = const_b / [ (D+1)^pow_b1 * n_in^pow_b2 ]
+        # c_res ~ N(0, s_r), s_r = const_r / [ (D+1)^pow_r1 * n_in^pow_r2 ]
+        elif init_type == "power":
+
+            const_b = init_scheme.get("const_b", 1.0)
+            pow_b1 = init_scheme.get("pow_b1", 0.5)
+            pow_b2 = init_scheme.get("pow_b2", 0.5)
+
+            if self.residual is not None:
+                basis_term = self.D + 1
+                
+                const_r = init_scheme.get("const_r", 1.0)
+                pow_r1 = init_scheme.get("pow_r1", 0.5)
+                pow_r2 = init_scheme.get("pow_r2", 0.5)
+                
+                std_res = const_r / ( (basis_term**pow_r1) * (self.n_in**pow_r2) )
+                c_res = nnx.initializers.normal(stddev=std_res)(
+                    self.rngs.params(), (self.n_out, self.n_in), jnp.float32
+                )                
+            else:
+                basis_term = self.D
+
+            std_b = const_b / ( (basis_term**pow_b1) * (self.n_in**pow_b2) )
+            c_basis = nnx.initializers.normal(stddev=std_b)(
+                self.rngs.params(), (self.n_out, self.n_in, self.D), jnp.float32
+            )
+
         # LeCun-like initialization, where Var[in] = Var[out]
         elif init_type == "lecun":
 

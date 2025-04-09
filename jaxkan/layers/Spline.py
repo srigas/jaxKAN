@@ -195,6 +195,34 @@ class BaseLayer(nnx.Module):
                 self.rngs.params(), (self.n_in * self.n_out, self.grid.G + self.k), jnp.float32
             )
 
+        # Custom power law initialization
+        # c_basis ~ N(0, s_b), s_b = const_b / [ (G+k+1)^pow_b1 * n_in^pow_b2 ]
+        # c_res ~ N(0, s_r), s_r = const_r / [ (G+k+1)^pow_r1 * n_in^pow_r2 ]
+        elif init_type == "power":
+
+            const_b = init_scheme.get("const_b", 1.0)
+            pow_b1 = init_scheme.get("pow_b1", 0.5)
+            pow_b2 = init_scheme.get("pow_b2", 0.5)
+
+            if self.residual is not None:
+                basis_term = self.grid.G + self.k + 1
+                
+                const_r = init_scheme.get("const_r", 1.0)
+                pow_r1 = init_scheme.get("pow_r1", 0.5)
+                pow_r2 = init_scheme.get("pow_r2", 0.5)
+                
+                std_res = const_r / ( (basis_term**pow_r1) * (self.n_in**pow_r2) )
+                c_res = nnx.initializers.normal(stddev=std_res)(
+                    self.rngs.params(), (self.n_out, self.n_in), jnp.float32
+                )                
+            else:
+                basis_term = self.grid.G + self.k
+
+            std_b = const_b / ( (basis_term**pow_b1) * (self.n_in**pow_b2) )
+            c_basis = nnx.initializers.normal(stddev=std_b)(
+                self.rngs.params(), (self.n_in * self.n_out, self.grid.G + self.k), jnp.float32
+            )
+
         # LeCun-like initialization, where Var[in] = Var[out]
         # Thanks are owed to Verma Dhruv for collaborating on this initialization type
         elif init_type == "lecun":
@@ -641,6 +669,34 @@ class SplineLayer(nnx.Module):
             
             std = init_scheme.get("std", 0.1)
             c_basis = nnx.initializers.normal(stddev=std)(
+                self.rngs.params(), (self.n_out, self.n_in, self.grid.G + self.k), jnp.float32
+            )
+
+        # Custom power law initialization
+        # c_basis ~ N(0, s_b), s_b = const_b / [ (G+k+1)^pow_b1 * n_in^pow_b2 ]
+        # c_res ~ N(0, s_r), s_r = const_r / [ (G+k+1)^pow_r1 * n_in^pow_r2 ]
+        elif init_type == "power":
+
+            const_b = init_scheme.get("const_b", 1.0)
+            pow_b1 = init_scheme.get("pow_b1", 0.5)
+            pow_b2 = init_scheme.get("pow_b2", 0.5)
+
+            if self.residual is not None:
+                basis_term = self.grid.G + self.k + 1
+                
+                const_r = init_scheme.get("const_r", 1.0)
+                pow_r1 = init_scheme.get("pow_r1", 0.5)
+                pow_r2 = init_scheme.get("pow_r2", 0.5)
+                
+                std_res = const_r / ( (basis_term**pow_r1) * (self.n_in**pow_r2) )
+                c_res = nnx.initializers.normal(stddev=std_res)(
+                    self.rngs.params(), (self.n_out, self.n_in), jnp.float32
+                )                
+            else:
+                basis_term = self.grid.G + self.k
+
+            std_b = const_b / ( (basis_term**pow_b1) * (self.n_in**pow_b2) )
+            c_basis = nnx.initializers.normal(stddev=std_b)(
                 self.rngs.params(), (self.n_out, self.n_in, self.grid.G + self.k), jnp.float32
             )
 
