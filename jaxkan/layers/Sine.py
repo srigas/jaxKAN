@@ -183,10 +183,24 @@ class SineLayer(nnx.Module):
         # LeCun-like initialization, where Var[in] = Var[out]
         elif init_type == "lecun":
 
-            # Generate a sample of 10^5 points
             key = jax.random.key(seed)
-            sample = jax.random.uniform(key, shape=(100000,), minval=-1.0, maxval=1.0)
-            sample_std = sample.std().item()
+
+            # Also get distribution type
+            distrib = init_scheme.get("distribution", "uniform")
+
+            if distrib is None:
+                distrib = "uniform"
+
+            # Generate a sample of 10^5 points
+            if distrib == "uniform":
+                sample = jax.random.uniform(key, shape=(100000,), minval=-1.0, maxval=1.0)
+            elif distrib == "normal":
+                sample = jax.random.normal(key, shape=(100000,))
+
+            # Finally get gain
+            gain = init_scheme.get("gain", None)
+            if gain is None:
+                gain = sample.std().item()
             
             # Extend the sample to be able to pass through basis
             sample_ext = jnp.tile(sample[:, None], (1, self.n_in))
@@ -205,14 +219,108 @@ class SineLayer(nnx.Module):
                 y_res_sq = y_res**2
                 y_res_sq_mean = y_res_sq.mean().item()
 
-                std_res = sample_std/jnp.sqrt(scale*y_res_sq_mean)
+                std_res = gain/jnp.sqrt(scale*y_res_sq_mean)
                 c_res = nnx.initializers.normal(stddev=std_res)(self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
             
             else:
                 # Variance equipartitioned across G+k terms
                 scale = self.n_in * self.D
 
-            std_b = sample_std/jnp.sqrt(scale*y_b_sq_mean)
+            std_b = gain/jnp.sqrt(scale*y_b_sq_mean)
+            c_basis = nnx.initializers.normal(stddev=std_b)(
+                self.rngs.params(), (self.n_out, self.n_in, self.D), jnp.float32
+            )
+
+        # Glorot-like initialization, where we attempt to balance Var[in] = Var[out] and Var[δin] = Var[δout]
+        elif init_type == "glorot":
+
+            key = jax.random.key(seed)
+
+            # Also get distribution type
+            distrib = init_scheme.get("distribution", "uniform")
+
+            if distrib is None:
+                distrib = "uniform"
+
+            # Generate a sample of 10^5 points
+            if distrib == "uniform":
+                sample = jax.random.uniform(key, shape=(100000,), minval=-1.0, maxval=1.0)
+            elif distrib == "normal":
+                sample = jax.random.normal(key, shape=(100000,))
+
+            # Finally get gain
+            gain = init_scheme.get("gain", None)
+            if gain is None:
+                gain = sample.std().item()
+
+            # Extend the sample to be able to pass through basis
+            sample_ext = jnp.tile(sample[:, None], (1, self.n_in))
+
+            # ------------- Basis function gradient ----------------------
+            # Define a scalar version of the basis function
+            def u(x):
+                return self.basis(x)
+
+            def basis_scalar(x):
+                # Convert scalar x into an array with shape (1, 1) so that it matches the expected (batch, n_in) shape.
+                x_arr = jnp.array([[x]])
+                # Call the existing basis method.
+                # This returns an array of shape (1, n_in, D) (or (1, n_in, D+1)) depending on the bias.
+                out = u(x_arr)
+                # Since the n_in dimension is redundant (due to tiling), extract the first element
+                # from both the batch and n_in dimensions.
+                return out[0, 0, :]
+
+            # Create a Jacobian function for the scalar wrapper
+            jac_basis = jax.jacobian(basis_scalar)
+
+            # Use jax.vmap twice to vectorize over batch and n_in.
+            grad_basis = jax.vmap(jax.vmap(jac_basis))(sample_ext)
+            # ------------------------------------------------------------
+            
+            # Calculate E[B_m^2(x)]
+            y_b = u(sample_ext)
+            y_b_sq = y_b**2
+            y_b_sq_mean = y_b_sq.mean().item()
+
+            # Calculate E[B'_m^2(x)]
+            grad_b_sq = grad_basis**2
+            grad_b_sq_mean = grad_b_sq.mean().item()
+            
+            # Deal with residual if available
+            if self.residual is not None:
+                # Variance equipartitioned across all terms
+                scale_in = self.n_in * (self.D + 1)
+                scale_out = self.n_out * (self.D + 1)
+
+                # ------------- Residual function gradient ----------------------
+                # Similar idea to the basis function
+                def r(x):
+                    return self.residual(x)
+
+                jac_res = jax.jacobian(r)
+                
+                grad_res = jax.vmap(jac_res)(sample)
+                # ------------------------------------------------------------
+                
+                # Calculate E[R^2(x)]
+                y_res = self.residual(sample)
+                y_res_sq = y_res**2
+                y_res_sq_mean = y_res_sq.mean().item()
+
+                # Calculate E[R'^2(x)]
+                grad_res_sq = grad_res**2
+                grad_res_sq_mean = grad_res_sq.mean().item()
+
+                std_res = gain*jnp.sqrt(2.0 / (scale_in*y_res_sq_mean + scale_out*grad_res_sq_mean))
+                c_res = nnx.initializers.normal(stddev=std_res)(self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
+            
+            else:
+                # Variance equipartitioned across G+k terms
+                scale_in = self.n_in * self.D
+                scale_out = self.n_out * self.D
+
+            std_b = gain*jnp.sqrt(2.0 / (scale_in*y_b_sq_mean + scale_out*grad_b_sq_mean))
             c_basis = nnx.initializers.normal(stddev=std_b)(
                 self.rngs.params(), (self.n_out, self.n_in, self.D), jnp.float32
             )
