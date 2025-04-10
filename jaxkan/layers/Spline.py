@@ -312,34 +312,29 @@ class BaseLayer(nnx.Module):
 
             # ------------- Basis function gradient ----------------------
             # Define a scalar version of the basis function
-            def u(x):
-                return self.basis(x)
-
             def basis_scalar(x):
-                # Convert scalar x into an array with shape (1, 1) so that it matches the expected (batch, n_in) shape.
-                x_arr = jnp.array([[x]])
-                # Call the existing basis method.
-                # This returns an array of shape (1, n_in, D) (or (1, n_in, D+1)) depending on the bias.
-                out = u(x_arr)
-                # Since the n_in dimension is redundant (due to tiling), extract the first element
-                # from both the batch and n_in dimensions.
-                return out[0, 0, :]
+                return self.basis(jnp.array([[x]]))[0, 0, :]
 
             # Create a Jacobian function for the scalar wrapper
             jac_basis = jax.jacobian(basis_scalar)
 
-            # Use jax.vmap twice to vectorize over batch and n_in.
-            grad_basis = jax.vmap(jac_basis)(sample)
+            num_batches = 20
+            batch_size = sample_size // num_batches
+            grad_sq_accum = 0.0
+            
+            for i in range(num_batches):
+                batch = sample[i*batch_size:(i+1)*batch_size]
+                grad_batch = jax.vmap(jac_basis)(batch)
+                grad_sq_accum += (grad_batch**2).sum()
+
+            # Calculate E[B'_m^2(x)]
+            grad_b_sq_mean = grad_sq_accum / (sample_size * (self.grid.G + self.k))
             # ------------------------------------------------------------
             
             # Calculate E[B_m^2(x)]
             y_b = u(sample_ext)
             y_b_sq = y_b**2
             y_b_sq_mean = y_b_sq.mean().item()
-
-            # Calculate E[B'_m^2(x)]
-            grad_b_sq = grad_basis**2
-            grad_b_sq_mean = grad_b_sq.mean().item()
             
             # Deal with residual if available
             if self.residual is not None:
@@ -792,34 +787,29 @@ class SplineLayer(nnx.Module):
 
             # ------------- Basis function gradient ----------------------
             # Define a scalar version of the basis function
-            def u(x):
-                return self.basis(x)
-
             def basis_scalar(x):
-                # Convert scalar x into an array with shape (1, 1) so that it matches the expected (batch, n_in) shape.
-                x_arr = jnp.array([[x]])
-                # Call the existing basis method.
-                # This returns an array of shape (1, n_in, D) (or (1, n_in, D+1)) depending on the bias.
-                out = u(x_arr)
-                # Since the n_in dimension is redundant (due to tiling), extract the first element
-                # from both the batch and n_in dimensions.
-                return out[0, 0, :]
+                return self.basis(jnp.array([[x]]))[0, 0, :]
 
             # Create a Jacobian function for the scalar wrapper
             jac_basis = jax.jacobian(basis_scalar)
 
-            # Use jax.vmap twice to vectorize over batch and n_in.
-            grad_basis = jax.vmap(jac_basis)(sample)
+            num_batches = 20
+            batch_size = sample_size // num_batches
+            grad_sq_accum = 0.0
+            
+            for i in range(num_batches):
+                batch = sample[i*batch_size:(i+1)*batch_size]
+                grad_batch = jax.vmap(jac_basis)(batch)
+                grad_sq_accum += (grad_batch**2).sum()
+
+            # Calculate E[B'_m^2(x)]
+            grad_b_sq_mean = grad_sq_accum / (sample_size * (self.grid.G + self.k))
             # ------------------------------------------------------------
             
             # Calculate E[B_m^2(x)]
             y_b = u(sample_ext)
             y_b_sq = y_b**2
             y_b_sq_mean = y_b_sq.mean().item()
-
-            # Calculate E[B'_m^2(x)]
-            grad_b_sq = grad_basis**2
-            grad_b_sq_mean = grad_b_sq.mean().item()
             
             # Deal with residual if available
             if self.residual is not None:
