@@ -332,7 +332,7 @@ class BaseLayer(nnx.Module):
             # ------------------------------------------------------------
             
             # Calculate E[B_m^2(x)]
-            y_b = u(sample_ext)
+            y_b = self.basis(sample_ext)
             y_b_sq = y_b**2
             y_b_sq_mean = y_b_sq.mean().item()
             
@@ -807,7 +807,7 @@ class SplineLayer(nnx.Module):
             # ------------------------------------------------------------
             
             # Calculate E[B_m^2(x)]
-            y_b = u(sample_ext)
+            y_b = self.basis(sample_ext)
             y_b_sq = y_b**2
             y_b_sq_mean = y_b_sq.mean().item()
             
