@@ -40,16 +40,16 @@ def test_spline_layer_initialization(spline_layer, model_params):
     
     assert spline_layer.n_in == model_params["n_in"], "SplineLayer n_in not set correctly"
     assert spline_layer.n_out == model_params["n_out"], "SplineLayer n_out not set correctly"
-    assert spline_layer.c_basis.value.shape == (
+    assert spline_layer.c_basis[...].shape == (
         model_params["n_out"],
         model_params["n_in"],
         model_params["G"] + model_params["k"]
     ), "SplineLayer c_basis shape incorrect"
-    assert spline_layer.c_spl.value.shape == (
+    assert spline_layer.c_spl[...].shape == (
         model_params["n_out"],
         model_params["n_in"]
     ), "SplineLayer c_spl shape incorrect"
-    assert spline_layer.c_res.value.shape == (
+    assert spline_layer.c_res[...].shape == (
         model_params["n_out"],
         model_params["n_in"]
     ), "SplineLayer c_res shape incorrect"
@@ -101,15 +101,15 @@ def test_base_layer_initialization(base_layer, model_params):
     
     assert base_layer.n_in == model_params["n_in"], "BaseLayer n_in not set correctly"
     assert base_layer.n_out == model_params["n_out"], "BaseLayer n_out not set correctly"
-    assert base_layer.c_basis.value.shape == (
+    assert base_layer.c_basis[...].shape == (
         model_params["n_out"] * model_params["n_in"],
         model_params["G"] + model_params["k"]
     ), "BaseLayer c_basis shape incorrect"
-    assert base_layer.c_spl.value.shape == (
+    assert base_layer.c_spl[...].shape == (
         model_params["n_out"],
         model_params["n_in"]
     ), "BaseLayer c_spl shape incorrect"
-    assert base_layer.c_res.value.shape == (
+    assert base_layer.c_res[...].shape == (
         model_params["n_out"],
         model_params["n_in"]
     ), "BaseLayer c_res shape incorrect"

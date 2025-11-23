@@ -413,7 +413,7 @@ class BaseLayer(nnx.Module):
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
         # the current coefficients and Bi(x) are the current spline basis functions
         Bi = self.basis(x) # (n_in*n_out, G+k, batch)
-        ci = self.c_basis.value # (n_in*n_out, G+k)
+        ci = self.c_basis[...] # (n_in*n_out, G+k)
         ciBi = jnp.einsum('ij,ijk->ik', ci, Bi) # (n_in*n_out, batch)
 
         # Update the grid
@@ -462,7 +462,7 @@ class BaseLayer(nnx.Module):
             
         # Calculate spline basis activations
         Bi = self.basis(x) # (n_in*n_out, G+k, batch)
-        ci = self.c_basis.value # (n_in*n_out, G+k)
+        ci = self.c_basis[...] # (n_in*n_out, G+k)
         # Calculate spline activation
         spl = jnp.einsum('ij,ijk->ik', ci, Bi) # (n_in*n_out, batch)
         # Transpose to shape (batch, n_in*n_out)
@@ -471,7 +471,7 @@ class BaseLayer(nnx.Module):
         # Check if external_weights == True
         if self.c_spl is not None:
             # Reshape constants to (1, n_in*n_out)
-            cnst_spl = jnp.expand_dims(self.c_spl.value, axis=0).reshape((1, self.n_in * self.n_out))
+            cnst_spl = jnp.expand_dims(self.c_spl[...], axis=0).reshape((1, self.n_in * self.n_out))
             # Calculate spline term
             y = cnst_spl * spl # (batch, n_in*n_out)
         else:
@@ -486,7 +486,7 @@ class BaseLayer(nnx.Module):
             # Calculate residual activation - shape (batch, n_in*n_out)
             res = jnp.transpose(self.residual(x_ext), (1,0))
             # Reshape constant to (1, n_in*n_out)
-            cnst_res = jnp.expand_dims(self.c_res.value, axis=0).reshape((1, self.n_in * self.n_out))
+            cnst_res = jnp.expand_dims(self.c_res[...], axis=0).reshape((1, self.n_in * self.n_out))
             # Calculate the entire activation
             y += cnst_res * res # (batch, n_in*n_out)
         
@@ -495,7 +495,7 @@ class BaseLayer(nnx.Module):
         y = jnp.sum(y_reshaped, axis=2)  # (batch, n_out)
 
         if self.bias is not None:
-            y += self.bias.value  # (batch, n_out)
+            y += self.bias[...]  # (batch, n_out)
         
         return y
 
@@ -888,7 +888,7 @@ class SplineLayer(nnx.Module):
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
         # the current coefficients and Bi(x) are the current spline basis functions
         Bi = self.basis(x).transpose(1, 0, 2) # (n_in, batch, G+k)
-        ci = self.c_basis.value.transpose(1, 2, 0) # (n_in, G+k, n_out)
+        ci = self.c_basis[...].transpose(1, 2, 0) # (n_in, G+k, n_out)
         ciBi = jnp.einsum('ijk,ikm->ijm', Bi, ci) # (n_in, batch, n_out)
 
         # Update the grid
@@ -937,9 +937,9 @@ class SplineLayer(nnx.Module):
 
         # Check if external_weights == True
         if self.c_spl is not None:
-            spl_w = self.c_basis.value * self.c_spl[..., None] # (n_out, n_in, G+k)
+            spl_w = self.c_basis[...] * self.c_spl[..., None] # (n_out, n_in, G+k)
         else:
-            spl_w = self.c_basis.value
+            spl_w = self.c_basis[...]
 
         # Reshape spline coefficients
         spl_w = spl_w.reshape(self.n_out, -1) # (n_out, n_in * (G+k))
@@ -952,13 +952,13 @@ class SplineLayer(nnx.Module):
             res = self.residual(x) # (batch, n_in)
         
             # Multiply by trainable weights
-            res_w = self.c_res.value # (n_out, n_in)
+            res_w = self.c_res[...] # (n_out, n_in)
             full_res = jnp.matmul(res, res_w.T) # (batch, n_out)
 
             y += full_res # (batch, n_out)
 
         if self.bias is not None:
-            y += self.bias.value  # (batch, n_out)
+            y += self.bias[...]  # (batch, n_out)
         
         return y
         

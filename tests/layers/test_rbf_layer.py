@@ -38,12 +38,12 @@ def test_rbf_layer_initialization(gaussian_layer, model_params):
     
         assert model.n_in == model_params["n_in"], f"{model} n_in not set correctly"
         assert model.n_out == model_params["n_out"], f"{model} n_out not set correctly"
-        assert model.c_basis.value.shape == (
+        assert model.c_basis[...].shape == (
             model_params["n_out"],
             model_params["n_in"],
             model_params["D"]
         ), f"{model} c_basis shape incorrect"
-        assert model.c_ext.value.shape == (
+        assert model.c_ext[...].shape == (
             model_params["n_out"],
             model_params["n_in"]
         ), f"{model} c_ext shape incorrect"

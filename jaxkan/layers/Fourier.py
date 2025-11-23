@@ -137,8 +137,8 @@ class FourierLayer(nnx.Module):
         # Apply the inputs to the current "grid" to acquire the cosine and sine terms
         ci, si = self.basis(x) # (batch, n_in, k)
         ci, si = ci.transpose(1, 0, 2), si.transpose(1, 0, 2) # (n_in, batch, D)
-        cos_w = self.c_cos.value.transpose(1, 2, 0) # (n_in, D, n_out)
-        sin_w = self.c_sin.value.transpose(1, 2, 0) # (n_in, D, n_out)
+        cos_w = self.c_cos[...].transpose(1, 2, 0) # (n_in, D, n_out)
+        sin_w = self.c_sin[...].transpose(1, 2, 0) # (n_in, D, n_out)
         
         cosines = jnp.einsum('ijk,ikm->ijm', ci, cos_w) # (n_in, batch, n_out)
         sines = jnp.einsum('ijk,ikm->ijm', si, sin_w) # (n_in, batch, n_out)
@@ -192,15 +192,15 @@ class FourierLayer(nnx.Module):
         cosines, sines = ci.reshape(batch, -1), si.reshape(batch, -1) # each has shape (batch, n_in * D)
         
         # Reshape factors
-        cos_w = self.c_cos.value.reshape(self.n_out, -1) # (n_out, n_in * D)
-        sin_w = self.c_sin.value.reshape(self.n_out, -1) # (n_out, n_in * D)
+        cos_w = self.c_cos[...].reshape(self.n_out, -1) # (n_out, n_in * D)
+        sin_w = self.c_sin[...].reshape(self.n_out, -1) # (n_out, n_in * D)
         
         # Get inner products        
         y = jnp.matmul(cosines, cos_w.T) # (batch, n_out)
         y += jnp.matmul(sines, sin_w.T) # (batch, n_out)
 
         if self.bias is not None:
-            y += self.bias.value # (batch, n_out)
+            y += self.bias[...] # (batch, n_out)
         
         return y
         
