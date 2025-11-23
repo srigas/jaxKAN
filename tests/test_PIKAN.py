@@ -3,7 +3,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 from jaxkan.utils.PIKAN import sobol_sample, gradf, get_vanilla_loss, get_adaptive_loss, train_PIKAN
-from jaxkan.KAN import KAN
+from jaxkan.models.KAN import KAN
 
 
 @pytest.fixture

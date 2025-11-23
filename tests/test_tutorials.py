@@ -1,6 +1,6 @@
 import pytest
 
-from jaxkan.KAN import KAN
+from jaxkan.models.KAN import KAN
 from jaxkan.utils.PIKAN import sobol_sample, gradf
 
 import jax
