@@ -4,7 +4,7 @@ import jax
 import jax.numpy as jnp
 from flax import nnx
 
-from jaxkan.KAN import KAN
+from jaxkan.models.KAN import KAN
 
 
 @pytest.fixture

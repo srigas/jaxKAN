@@ -5,3 +5,5 @@ runs/
 .python-version
 pyproject.toml
 uv.lock
+build/
+jaxkan.egg-info/

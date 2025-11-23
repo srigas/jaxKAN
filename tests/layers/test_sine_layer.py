@@ -36,12 +36,12 @@ def test_sine_layer_initialization(sine_layer, model_params):
     
     assert sine_layer.n_in == model_params["n_in"], "SineLayer n_in not set correctly"
     assert sine_layer.n_out == model_params["n_out"], "SineLayer n_out not set correctly"
-    assert sine_layer.c_basis.value.shape == (
+    assert sine_layer.c_basis[...].shape == (
         model_params["n_out"],
         model_params["n_in"],
         model_params["D"]
     ), "SineLayer c_basis shape incorrect"
-    assert sine_layer.c_ext.value.shape == (
+    assert sine_layer.c_ext[...].shape == (
         model_params["n_out"],
         model_params["n_in"]
     ), "SineLayer c_ext shape incorrect"

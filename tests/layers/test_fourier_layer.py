@@ -35,12 +35,12 @@ def test_fourier_layer_initialization(fourier_layer, model_params):
     
     assert fourier_layer.n_in == model_params["n_in"], "FourierLayer n_in not set correctly"
     assert fourier_layer.n_out == model_params["n_out"], "FourierLayer n_out not set correctly"
-    assert fourier_layer.c_cos.value.shape == (
+    assert fourier_layer.c_cos[...].shape == (
         model_params["n_out"],
         model_params["n_in"],
         model_params["D"]
     ), "FourierLayer c_cos shape incorrect"
-    assert fourier_layer.c_sin.value.shape == (
+    assert fourier_layer.c_sin[...].shape == (
         model_params["n_out"],
         model_params["n_in"],
         model_params["D"]

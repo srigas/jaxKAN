@@ -409,7 +409,7 @@ class LegendreLayer(nnx.Module):
         # Apply the inputs to the current grid to acquire y = Sum(ciBi(x)), where ci are
         # the current coefficients and Bi(x) are the current Legendre basis functions
         Bi = self.basis(x).transpose(1, 0, 2) # (n_in, batch, D+1)
-        ci = self.c_basis.value.transpose(1, 2, 0) # (n_in, D+1, n_out)
+        ci = self.c_basis[...].transpose(1, 2, 0) # (n_in, D+1, n_out)
         ciBi = jnp.einsum('ijk,ikm->ijm', Bi, ci) # (n_in, batch, n_out)
 
         # Update the degree order
@@ -457,9 +457,9 @@ class LegendreLayer(nnx.Module):
 
         # Check if external_weights == True
         if self.c_ext is not None:
-            act_w = self.c_basis.value * self.c_ext[..., None] # (n_out, n_in, D+1)
+            act_w = self.c_basis[...] * self.c_ext[..., None] # (n_out, n_in, D+1)
         else:
-            act_w = self.c_basis.value
+            act_w = self.c_basis[...]
         
         # Calculate coefficients
         act_w = act_w.reshape(self.n_out, -1) # (n_out, n_in * (D+1))
@@ -471,12 +471,12 @@ class LegendreLayer(nnx.Module):
             # Calculate residual activation
             res = self.residual(x) # (batch, n_in)
             # Multiply by trainable weights
-            res_w = self.c_res.value # (n_out, n_in)
+            res_w = self.c_res[...] # (n_out, n_in)
             full_res = jnp.matmul(res, res_w.T) # (batch, n_out)
 
             y += full_res # (batch, n_out)
 
         if self.bias is not None:
-            y += self.bias.value # (batch, n_out)
+            y += self.bias[...] # (batch, n_out)
         
         return y

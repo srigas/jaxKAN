@@ -139,11 +139,12 @@ def adam_transition(old_state, model_state):
 
     for key in range(len(adam_mu['layers'])):
         # Find the c_basis shape for this layer
-        c_shape = model_state['layers'][key]['c_basis'].value.shape
+        c_shape = model_state['layers'][key]['c_basis'][...].shape
         # Get new mu and nu
-        mu_old = adam_mu['layers'][key]['c_basis'].value
-        nu_old = adam_nu['layers'][key]['c_basis'].value
+        mu_old = adam_mu['layers'][key]['c_basis'][...]
+        nu_old = adam_nu['layers'][key]['c_basis'][...]
         mu_new, nu_new = interpolate_moments(mu_old, nu_old, c_shape)
-        # Set them
-        adam_mu['layers'][key]['c_basis'].value = mu_new
-        adam_nu['layers'][key]['c_basis'].value = nu_new
+        # Set them using set_value for assignment
+        adam_mu['layers'][key]['c_basis'].set_value(mu_new)
+        adam_nu['layers'][key]['c_basis'].set_value(nu_new)
+        

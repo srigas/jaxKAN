@@ -1,6 +1,6 @@
 import pytest
 
-from jaxkan.KAN import KAN
+from jaxkan.models.KAN import KAN
 from jaxkan.utils.PIKAN import sobol_sample, gradf
 
 import jax
@@ -59,7 +59,7 @@ def test_function_fitting(seed, req_params):
 
     # Initialize optimizer
     opt_type = optax.adam(learning_rate=0.001)
-    optimizer = nnx.Optimizer(model, opt_type)
+    optimizer = nnx.Optimizer(model, opt_type, wrt=nnx.Param)
 
     # Define the train loop
     @nnx.jit
@@ -72,7 +72,7 @@ def test_function_fitting(seed, req_params):
             return loss
     
         loss, grads = nnx.value_and_grad(loss_fn)(model)
-        optimizer.update(grads)
+        optimizer.update(model, grads)
     
         return loss
 
@@ -122,7 +122,7 @@ def test_pde_solving(seed, req_params):
 
     # Initialize optimizer
     opt_type = optax.adam(learning_rate=0.001)
-    optimizer = nnx.Optimizer(model, opt_type)
+    optimizer = nnx.Optimizer(model, opt_type, wrt=nnx.Param)
 
     # PDE Loss
     def pde_loss(model, collocs):
@@ -162,7 +162,7 @@ def test_pde_solving(seed, req_params):
             return total_loss
     
         loss, grads = nnx.value_and_grad(loss_fn)(model)
-        optimizer.update(grads)
+        optimizer.update(model, grads)
     
         return loss
 
