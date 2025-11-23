@@ -15,5 +15,5 @@ The following list of tutorials provides a hands-on introduction to using jaxKAN
    Tutorial 5 - PINNs
    Tutorial 6 - Adaptive State Transition
    Tutorial 7 - Adaptive PIKANs
-   Tutorial 8 - DIY KANs
-   Tutorial 9 - Inverse PINN Problem
+   Tutorial 8 - Inverse PINN Problem
+   Tutorial 9 - DIY KANs
