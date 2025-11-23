@@ -3,15 +3,6 @@
 API Reference
 =============
 
-Main KAN Class
---------------
-
-.. automodule:: jaxkan.KAN
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :special-members: __init__, __call__
-
 
 KAN Layer Classes
 -----------------
@@ -22,31 +13,47 @@ KAN Layer Classes
    :show-inheritance:
    :special-members: __init__, __call__
    
-.. automodule:: jaxkan.layers.BaseLayer
+.. automodule:: jaxkan.layers.Spline
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__, __call__
    
-.. automodule:: jaxkan.layers.SplineLayer
+.. automodule:: jaxkan.layers.Chebyshev
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__, __call__
    
-.. automodule:: jaxkan.layers.ChebyLayer
+.. automodule:: jaxkan.layers.Legendre
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__, __call__
    
-.. automodule:: jaxkan.layers.ModifiedChebyLayer
+.. automodule:: jaxkan.layers.Fourier
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__, __call__
    
-.. automodule:: jaxkan.layers.FourierLayer
+.. automodule:: jaxkan.layers.RBF
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+   
+.. automodule:: jaxkan.layers.Sine
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+
+
+KAN-Based Models
+--------------
+
+.. automodule:: jaxkan.models.KAN
    :members:
    :undoc-members:
    :show-inheritance:
@@ -62,10 +69,8 @@ Utilities
    :show-inheritance:
    :special-members: __init__, __call__
 
-
 .. automodule:: jaxkan.utils.PIKAN
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__, __call__
-   

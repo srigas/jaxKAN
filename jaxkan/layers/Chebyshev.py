@@ -380,6 +380,93 @@ class ChebyshevLayer(nnx.Module):
                 self.rngs.params(), (self.n_out, self.n_in, ext_dim), jnp.float32
             )
 
+        # Glorot-like initialization as presented in the paper "Towards Deep Physics-Informed Kolmogorov-Arnold Networks"
+        # The main difference is that we do not aggregate over all sigmas, each mode has its own, hence "fine grained"
+        elif init_type == "glorot_fine":
+
+            key = jax.random.key(seed)
+
+            # Also get distribution type
+            distrib = init_scheme.get("distribution", "uniform")
+
+            if distrib is None:
+                distrib = "uniform"
+
+            sample_size = init_scheme.get("sample_size", 10000)
+
+            if sample_size is None:
+                sample_size = 10000
+
+            # Generate a sample of points
+            if distrib == "uniform":
+                sample = jax.random.uniform(key, shape=(sample_size,), minval=-1.0, maxval=1.0)
+            elif distrib == "normal":
+                sample = jax.random.normal(key, shape=(sample_size,))
+
+            # Finally get gain
+            gain = init_scheme.get("gain", None)
+            if gain is None:
+                gain = sample.std().item()
+
+            # Extend the sample to be able to pass through basis
+            sample_ext = jnp.tile(sample[:, None], (1, self.n_in))
+
+            # ------------- Basis functions ------------------------
+
+            # μ⁽0⁾ₘ (⟨B_m²⟩) 
+            B      = self.basis(sample_ext)
+            mu0    = (B**2).mean(axis=(0, 1))
+
+            # μ⁽1⁾ₘ (⟨B'_m²⟩)            
+
+            # Define a scalar version of the basis function
+            basis_scalar = lambda x: self.basis(jnp.array([[x]]))[0, 0, :]
+
+            jac_basis = jax.jacrev(basis_scalar)
+            mu1  = (jax.vmap(jac_basis)(sample)**2).mean(axis=0)
+
+            # ------------- Residual function ----------------------
+            # Deal with residual if available - same as simple glorot
+            if self.residual is not None:
+                # Variance equipartitioned across all terms
+                scale_in = self.n_in * (ext_dim + 1)
+                scale_out = self.n_out * (ext_dim + 1)
+
+                # ------------- Residual function gradient ----------------------
+                # Similar idea to the basis function
+                def r(x):
+                    return self.residual(x)
+
+                jac_res = jax.jacobian(r)
+                
+                grad_res = jax.vmap(jac_res)(sample)
+                # ------------------------------------------------------------
+                
+                # Calculate E[R^2(x)]
+                y_res = self.residual(sample)
+                y_res_sq = y_res**2
+                y_res_sq_mean = y_res_sq.mean().item()
+
+                # Calculate E[R'^2(x)]
+                grad_res_sq = grad_res**2
+                grad_res_sq_mean = grad_res_sq.mean().item()
+
+                std_res = gain*jnp.sqrt(2.0 / (scale_in*y_res_sq_mean + scale_out*grad_res_sq_mean))
+                c_res = nnx.initializers.normal(stddev=std_res)(self.rngs.params(), (self.n_out, self.n_in), jnp.float32)
+            
+            else:
+                # Variance equipartitioned across G+k terms
+                scale_in = self.n_in * ext_dim
+                scale_out = self.n_out * ext_dim
+
+            sigma_vec = gain * jnp.sqrt(1.0 / (scale_in*mu0 + scale_out*mu1))
+
+            noise = nnx.initializers.normal(stddev=1.0)(
+                self.rngs.params(), (self.n_out, self.n_in, ext_dim), jnp.float32
+            )
+
+            c_basis  = noise * sigma_vec
+            
         # Custom initialization, where the user inputs pre-determined arrays
         elif init_type == "custom":
             
