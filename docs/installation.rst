@@ -12,7 +12,7 @@ jaxKAN is built on JAX, which supports CPU functionality across all conventional
 
 In addition, prior to installing jaxKAN, install:
 
-- Python 3.10 or higher.
+- Python 3.11 or 3.12.
 - all necessary NVIDIA drivers, if intending to use the GPU version of jaxKAN.
 
 

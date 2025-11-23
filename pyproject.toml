@@ -17,23 +17,21 @@ authors = [
 
 classifiers = [
     "Intended Audience :: Science/Research",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License"
 ]
 
 license = {file = "LICENSE"}
 
-requires-python = ">=3.10"
+requires-python = ">=3.11,<3.13"
 
 dependencies = [
-    "numpy>=2.1.3",
-    "scipy>=1.14.1",
-    "jax[cpu]>=0.4.35",
-    "optax>=0.2.4",
-    "flax>=0.10.2",
+    "numpy>=2.3.5",
+    "scipy>=1.16.3",
+    "jax[cpu]>=0.8.1",
+    "optax>=0.2.6",
+    "flax>=0.12.1",
 ]
 
 
@@ -44,7 +42,7 @@ Issues = "https://github.com/srigas/jaxkan/issues"
 
 [project.optional-dependencies]
 gpu = [
-    "jax[cuda12]"
+    "jax[cuda12]>=0.8.1"
 ]
 doc = [
     "jupyterlab",
