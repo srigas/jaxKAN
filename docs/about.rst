@@ -15,10 +15,16 @@ Research
 
 If you have used jaxKAN in your research, we'd love to hear from you! Below, you can find a list of academic publications that have used jaxKAN.
 
-- A. A. Howard, B. Jacob, S. H. Murphy, A. Heinlein, P. Stinis, "Finite basis Kolmogorov-Arnold networks: domain decomposition for data-driven and physics-informed problems," `arXiv preprint`, 2024. https://doi.org/10.48550/arXiv.2406.19662
+- Daniels, M., & Rigollet, P. (2025). Splat regression models (No. arXiv:2511.14042). arXiv. https://doi.org/10.48550/arXiv.2511.14042
 
-- S. Rigas, M. Papachristou, T. Papadopoulos, F. Anagnostopoulos and G. Alexandridis, "Adaptive Training of Grid-Dependent Physics-Informed Kolmogorov-Arnold Networks," in `IEEE Access`, vol. 12, pp. 176982-176998, 2024. https://doi.org/10.1109/ACCESS.2024.3504962
+- Rigas, S., Verma, D., Alexandridis, G., & Wang, Y. (2025). Initialization schemes for kolmogorov-arnold networks: An empirical study. arXiv. https://doi.org/10.48550/ARXIV.2509.03417
 
-- A. A. Howard, B. Jacob, P. Stinis, "Multifidelity Kolmogorov-Arnold Networks," `arXiv preprint`, 2024. https://doi.org/10.48550/arXiv.2410.14764
+- Rigas, S., Anagnostopoulos, F., Papachristou, M., & Alexandridis, G. (2025). Towards deep physics-informed kolmogorov-arnold networks. arXiv. https://doi.org/10.48550/ARXIV.2510.23501
 
-- B. Jacob, A. A. Howard, P. Stinis, "SPIKANs: Separable Physics-Informed Kolmogorov-Arnold Networks," `arXiv preprint`, 2024. https://doi.org/10.48550/arXiv.2411.06286
+- Howard, A. A., Jacob, B., & Stinis, P. (2025). Multifidelity kolmogorov–arnold networks. Machine Learning: Science and Technology, 6(3), 035038. https://doi.org/10.1088/2632-2153/adf702
+
+- Jacob, B., Howard, A. A., & Stinis, P. (2025). SPIKANs: Separable physics-informed Kolmogorov–Arnold networks. Machine Learning: Science and Technology, 6(3), 035060. https://doi.org/10.1088/2632-2153/ae05af
+
+- Howard, A. A., Jacob, B., Helfert, S., Heinlein, A., & Stinis, P. (2024). Finite basis Kolmogorov-Arnold networks: Domain decomposition for data-driven and physics-informed problems. arXiv. https://doi.org/10.48550/ARXIV.2406.19662
+
+- Rigas, S., Papachristou, M., Papadopoulos, T., Anagnostopoulos, F., & Alexandridis, G. (2024). Adaptive training of grid-dependent physics-informed kolmogorov-arnold networks. IEEE Access, 12, 176982–176998. https://doi.org/10.1109/ACCESS.2024.3504962

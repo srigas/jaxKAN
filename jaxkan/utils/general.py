@@ -147,3 +147,4 @@ def adam_transition(old_state, model_state):
         # Set them
         adam_mu['layers'][key]['c_basis'].value = mu_new
         adam_nu['layers'][key]['c_basis'].value = nu_new
+        

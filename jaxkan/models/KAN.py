@@ -51,7 +51,7 @@ class KAN(nnx.Module):
         if required_parameters is None:
             raise ValueError("required_parameters must be provided as a dictionary for the selected layer_type.")
         
-        self.layers = [
+        self.layers = nnx.List([
                 LayerClass(
                     n_in=layer_dims[i],
                     n_out=layer_dims[i + 1],
@@ -59,7 +59,7 @@ class KAN(nnx.Module):
                     seed=seed
                 )
                 for i in range(len(layer_dims) - 1)
-            ]
+            ])
     
     def update_grids(self, x, G_new):
         """

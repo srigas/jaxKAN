@@ -332,7 +332,7 @@ def train_PIKAN(model, pde_loss, collocs, bc_collocs, bc_data, glob_w, lr_vals, 
     opt_type = optax.adam(learning_rate=scheduler, nesterov=nesterov)
 
     # Define the optimizer
-    optimizer = nnx.Optimizer(model, opt_type)
+    optimizer = nnx.Optimizer(model, opt_type, wrt=nnx.Param)
 
     # Define loss function
     if loc_w is None:
@@ -345,7 +345,7 @@ def train_PIKAN(model, pde_loss, collocs, bc_collocs, bc_data, glob_w, lr_vals, 
     def train_step(model, optimizer, collocs, bc_collocs, bc_data, glob_w, loc_w):
         
         (loss, loc_w), grads = nnx.value_and_grad(loss_fn, has_aux=True)(model, collocs, bc_collocs, bc_data, glob_w, loc_w)
-        optimizer.update(grads)
+        optimizer.update(model, grads)
 
         return loss, loc_w
 
@@ -421,7 +421,7 @@ def train_PIKAN(model, pde_loss, collocs, bc_collocs, bc_data, glob_w, lr_vals, 
                     old_state = optimizer.opt_state
                     adam_transition(old_state, model_state)
                 else:
-                    optimizer = nnx.Optimizer(model, opt_type)
+                    optimizer = nnx.Optimizer(model, opt_type, wrt=nnx.Param)
             
         # Calculate the loss
         loss, loc_w = train_step(model, optimizer, collocs, bc_collocs, bc_data, glob_w, loc_w)
