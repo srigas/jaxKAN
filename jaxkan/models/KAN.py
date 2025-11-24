@@ -1,11 +1,10 @@
-from typing import List
 from jax import numpy as jnp
 
 from flax import nnx
 
 from ..layers import get_layer
 
-from typing import Union
+from typing import Union, List
 
 
 class KAN(nnx.Module):

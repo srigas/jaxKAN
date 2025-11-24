@@ -6,7 +6,8 @@ from flax import nnx
 from typing import Union
 
 from ..grids.RBFGrid import RBFGrid
-from ..utils.general import solve_full_lstsq
+
+from .utils import solve_full_lstsq
         
         
 class RBFLayer(nnx.Module):

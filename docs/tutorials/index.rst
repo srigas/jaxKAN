@@ -3,7 +3,7 @@
 Tutorials
 =========
 
-The following list of tutorials provides a hands-on introduction to using jaxKAN, with a particular focus on applications related to Physics-Informed Neural Networks (PINNs).
+The following list of tutorials provides a hands-on introduction to using jaxKAN, with a particular focus on applications related to Physics-Informed Kolmogorov–⁠Arnold Networks (PIKANs).
 
 .. toctree::
    :maxdepth: 1
@@ -12,8 +12,8 @@ The following list of tutorials provides a hands-on introduction to using jaxKAN
    Tutorial 2 - Layer Types
    Tutorial 3 - Initialization Types
    Tutorial 4 - Classification Example
-   Tutorial 5 - PINNs
-   Tutorial 6 - Adaptive State Transition
-   Tutorial 7 - Adaptive PIKANs
-   Tutorial 8 - Inverse PINN Problem
-   Tutorial 9 - DIY KANs
+   Tutorial 5 - DIY KANs
+   Tutorial 6 - PIKANs
+   Tutorial 7 - Adaptive State Transition
+   Tutorial 8 - Adaptive PIKANs
+   Tutorial 9 - Inverse PDE Problem

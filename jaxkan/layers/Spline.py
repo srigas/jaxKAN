@@ -8,7 +8,7 @@ from typing import Union
 from ..grids.BaseGrid import BaseGrid
 from ..grids.SplineGrid import SplineGrid
 
-from ..utils.general import solve_full_lstsq
+from .utils import solve_full_lstsq
 
 
 class BaseLayer(nnx.Module):
