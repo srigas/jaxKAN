@@ -9,8 +9,8 @@ def count_params(model):
     Count the total number of trainable parameters in a model.
     
     Args:
-        model (jaxkan.KAN.KAN):
-            jaxKAN model instance.
+        model (nnx.Module):
+            Flax model instance.
     
     Returns:
         total_params (int):
@@ -38,8 +38,8 @@ def get_frob(model, x):
     Compute the squared Frobenius norm of the model's gradient at a given input point.
     
     Args:
-        model (jaxkan.KAN.KAN):
-            jaxKAN model instance.
+        model (nnx.Module):
+            Flax model instance.
         x (jnp.array):
             Input point, shape (d,) or (1, d).
     
@@ -75,8 +75,8 @@ def get_complexity(model, pde_collocs, bc_collocs=None):
     Compute model complexity as the average squared Frobenius norm of gradients over collocation points.
     
     Args:
-        model (jaxkan.KAN.KAN):
-            jaxKAN model instance.
+        model (nnx.Module):
+            Flax model instance.
         pde_collocs (jnp.array):
             Collocation points for PDE/equation domain, shape (N, d).
         bc_collocs (jnp.array, optional):

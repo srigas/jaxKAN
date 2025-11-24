@@ -6,8 +6,8 @@ def model_eval(model, coords, refsol):
     Compute the relative L2 error between model predictions and reference solution.
     
     Args:
-        model (jaxkan.KAN.KAN):
-            jaxKAN model instance.
+        model (nnx.Module):
+            Flax model instance.
         coords (jnp.array):
             Input coordinates for evaluation, shape (N, n_dims).
         refsol (jnp.array):
