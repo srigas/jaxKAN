@@ -1,6 +1,7 @@
 import jax
 import jax.numpy as jnp
-from jaxkan.utils.general import solve_single_lstsq, solve_full_lstsq, interpolate_moments
+
+from jaxkan.layers.utils import solve_single_lstsq, solve_full_lstsq, interpolate_moments
 
 def test_solve_single_lstsq():
     
