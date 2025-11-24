@@ -5,7 +5,7 @@ from flax import nnx
 
 from typing import Union
 
-from ..utils.general import solve_full_lstsq
+from .utils import solve_full_lstsq
 
 
 # Dictionary of Chebyshev polynomials up to degree 20
