@@ -81,6 +81,42 @@ def get_ac_res(D=1e-4, c=5.0):
     return ac_res
 
 
+def get_diffusion_res(D=0.25):
+    """
+    Returns the diffusion equation residual function (2D).
+    
+    Args:
+        D (float):
+            Diffusion coefficient. Default is 0.25.
+    
+    Returns:
+        diffusion_res (function):
+            Residual function for the diffusion equation.
+    
+    Example:
+        >>> # Use default parameters
+        >>> diffusion_res = get_diffusion_res()
+        >>> 
+        >>> # Use custom parameters
+        >>> diffusion_res = get_diffusion_res(D=0.5)
+    """
+    D = jnp.array(D, dtype=jnp.float32)
+    
+    def diffusion_res(model, collocs):
+        def u(x):
+            y = model(x)
+            return y
+
+        u_t = gradf(u, [0])
+        u_xx = gradf(u, [1, 1])
+
+        res = u_t(collocs) - D*u_xx(collocs)
+
+        return res
+    
+    return diffusion_res
+
+
 def get_burgers_res(nu=0.01/jnp.pi):
     """
     Returns the Burgers equation residual function (2D).
