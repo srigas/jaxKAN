@@ -1,7 +1,8 @@
 import jax
 import jax.numpy as jnp
+import numpy as np
 
-import nnx
+from flax import nnx
 
 
 def count_params(model):
@@ -88,14 +89,14 @@ def get_complexity(model, pde_collocs, bc_collocs=None):
     
     Example:
         >>> model = KAN([2,8,1], 'spline', {}, 42)
-        >>> collocs = jnp.array([[0.5, 0.3], [0.2, 0.7]])
-        >>> ic_collocs = jnp.array([[0.0, 0.5]])
-        >>> complexity = get_complexity(model, collocs, ic_collocs)
+        >>> pde_collocs = jnp.array([[0.5, 0.3], [0.2, 0.7]])
+        >>> bc_collocs = jnp.array([[0.0, 0.5]])
+        >>> complexity = get_complexity(model, pde_collocs, bc_collocs)
     """
-    if ic_collocs is not None:
-        combined = jnp.concatenate([collocs, ic_collocs], axis=0)
+    if bc_collocs is not None:
+        combined = jnp.concatenate([pde_collocs, bc_collocs], axis=0)
     else:
-        combined = collocs
+        combined = pde_collocs
     
     complexity = jnp.mean(batched_frob(model, combined))
     
