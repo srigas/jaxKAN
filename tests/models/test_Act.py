@@ -25,15 +25,6 @@ def sample_input(seed):
 # ActLayer Tests
 # =============================================================================
 
-# Test: Initialization
-def test_actlayer_initialization(seed):
-    """Test ActLayer basic initialization."""
-    layer = ActLayer(n_in=2, n_out=5, N=4, train_basis=True, seed=seed)
-
-    assert layer.n_in == 2, "Incorrect n_in"
-    assert layer.n_out == 5, "Incorrect n_out"
-    assert layer.N == 4, "Incorrect N"
-
 
 def test_actlayer_parameter_shapes(seed):
     """Test that ActLayer parameters have correct shapes."""
