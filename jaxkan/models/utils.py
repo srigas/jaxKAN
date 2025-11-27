@@ -5,6 +5,67 @@ import numpy as np
 from flax import nnx
 
 
+def get_activation(activation: str = 'tanh'):
+    """
+    Returns the corresponding activation function based on user input.
+
+    Args:
+        activation (str):
+            Name of the activation function. Options include:
+            - 'celu': Continuously Differentiable ELU
+            - 'elu': Exponential Linear Unit
+            - 'gelu': Gaussian Error Linear Unit
+            - 'hard_sigmoid': Hard sigmoid
+            - 'hard_silu' / 'hard_swish': Hard SiLU
+            - 'hard_tanh': Hard hyperbolic tangent
+            - 'identity': Identity function (no activation)
+            - 'leaky_relu': Leaky ReLU
+            - 'log_sigmoid': Log-sigmoid function
+            - 'relu': Rectified Linear Unit
+            - 'selu': Scaled ELU
+            - 'sigmoid': Sigmoid function
+            - 'silu' / 'swish': Sigmoid Linear Unit
+            - 'soft_sign': Soft sign function
+            - 'softplus': Softplus function
+            - 'tanh': Hyperbolic tangent (default)
+
+    Returns:
+        callable:
+            The activation function.
+            
+    Example:
+        >>> act_fn = get_activation('tanh')
+        >>> y = act_fn(x)
+    """
+    activation = activation.lower()
+    
+    activation_map = {
+        'celu': nnx.celu,
+        'elu': nnx.elu,
+        'gelu': nnx.gelu,
+        'hard_sigmoid': nnx.hard_sigmoid,
+        'hard_silu': nnx.hard_silu,
+        'hard_swish': nnx.hard_silu,
+        'hard_tanh': nnx.hard_tanh,
+        'leaky_relu': nnx.leaky_relu,
+        'log_sigmoid': nnx.log_sigmoid,
+        'relu': nnx.relu,
+        'selu': nnx.selu,
+        'sigmoid': nnx.sigmoid,
+        'identity': nnx.identity,
+        'silu': nnx.silu,
+        'soft_sign': nnx.soft_sign,
+        'softplus': nnx.softplus,
+        'swish': nnx.swish,
+        'tanh': nnx.tanh
+    }
+    
+    if activation not in activation_map:
+        raise ValueError(f"Unknown activation: {activation}. Available: {list(activation_map.keys())}")
+    
+    return activation_map[activation]
+
+
 class PeriodEmbedder(nnx.Module):
     """
     Periodic embedding module that applies trigonometric transformations to specified input axes.
