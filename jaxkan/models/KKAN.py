@@ -230,7 +230,7 @@ class OuterBlock(nnx.Module):
                  m: int,
                  n_out: int,
                  layer_type: str = 'sine',
-                 layer_params: Union[dict, None] = {'D': 7, 'flavor': 'exact', 'init_scheme': {'type': 'glorot_fine'}},
+                 layer_params: Union[dict, None] = {'D': 7, 'init_scheme': {'type': 'glorot_fine'}},
                  seed: int = 42
                 ):
         """
@@ -313,7 +313,7 @@ class KKAN(nnx.Module):
                  L: int = 4,
                  activation: str = 'tanh',
                  outer_layer_type: str = 'sine',
-                 outer_layer_params: Union[dict, None] = {'D': 7, 'flavor': 'exact', 'init_scheme': {'type': 'glorot_fine'}},
+                 outer_layer_params: Union[dict, None] = {'D': 7, 'init_scheme': {'type': 'glorot_fine'}},
                  seed: int = 42):
         """
         Initializes a KKAN model.

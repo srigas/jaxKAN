@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from flax import nnx
 
 from jaxkan.models.KAN import KAN
-from jaxkan.models.utils import count_params, get_frob, batched_frob, get_complexity, PeriodEmbedder, RFFEmbedder
+from jaxkan.models.utils import count_params, get_frob, batched_frob, get_complexity, PeriodEmbedder, RFFEmbedder, get_activation
 
 
 @pytest.fixture
@@ -271,3 +271,48 @@ def test_rff_embedder_deterministic():
     y2 = embedder2(x)
     
     assert jnp.allclose(y1, y2), "Same seed should produce same initialization and output"
+
+
+# get_activation tests
+def test_get_activation_returns_callable():
+    """Test that get_activation returns a callable function."""
+    activation = get_activation('tanh')
+    
+    assert callable(activation), "get_activation should return a callable"
+
+
+def test_get_activation_common_functions():
+    """Test get_activation with common activation functions."""
+    activations = ['tanh', 'relu', 'silu', 'gelu', 'sigmoid']
+    x = jnp.array([-1.0, 0.0, 1.0])
+    
+    for name in activations:
+        act_fn = get_activation(name)
+        y = act_fn(x)
+        
+        assert y.shape == x.shape, f"Activation {name} changed shape"
+        assert jnp.all(jnp.isfinite(y)), f"Activation {name} produced non-finite values"
+
+
+def test_get_activation_invalid():
+    """Test that get_activation raises ValueError for unknown activation."""
+    with pytest.raises(ValueError, match="Unknown activation"):
+        get_activation('invalid_activation')
+
+
+def test_get_activation_output_ranges():
+    """Test that activations produce expected output ranges."""
+    x = jnp.linspace(-3.0, 3.0, 100)
+    
+    # tanh should be in [-1, 1]
+    tanh_out = get_activation('tanh')(x)
+    assert jnp.all(tanh_out >= -1.0) and jnp.all(tanh_out <= 1.0), "tanh should be in [-1, 1]"
+    
+    # sigmoid should be in [0, 1]
+    sigmoid_out = get_activation('sigmoid')(x)
+    assert jnp.all(sigmoid_out >= 0.0) and jnp.all(sigmoid_out <= 1.0), "sigmoid should be in [0, 1]"
+    
+    # relu should be >= 0
+    relu_out = get_activation('relu')(x)
+    assert jnp.all(relu_out >= 0.0), "relu should be >= 0"
+
