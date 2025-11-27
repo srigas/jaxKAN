@@ -14,6 +14,8 @@ class RBFGrid:
             The range of the grid's ends, on which the basis functions are defined.
         grid_e (float):
             Parameter that defines if the grid is uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
+        item (jnp.array):
+            The actual grid array, shape (n_nodes, D).
     """
     
     def __init__(self, n_nodes: int = 2, D: int = 3, grid_range: tuple = (-2.0, 2.0), grid_e: float = 1.0):

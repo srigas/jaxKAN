@@ -21,16 +21,16 @@ class ActLayer(nnx.Module):
     The k-th output is: (ActLayer(x))_k = Σ_i λ_{ki} Σ_j β_{kj} b_j(x_i)
 
     Attributes:
-        n_in (int):
-            Number of layer's incoming nodes.
-        n_out (int):
-            Number of layer's outgoing nodes.
-        N (int):
-            Number of basis functions (paper recommends N=4).
-        train_basis (bool):
-            Whether the basis function parameters (omega and phase) are trainable.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        rngs (nnx.Rngs):
+            Random number generator state.
+        beta (nnx.Param):
+            Basis coefficients, shape (n_out, N).
+        Lambda (nnx.Param):
+            Mixing weights, shape (n_out, n_in).
+        omega (Union[nnx.Param, jnp.array]):
+            Frequency parameters for basis functions (trainable or fixed).
+        phase (Union[nnx.Param, jnp.array]):
+            Phase parameters for basis functions (trainable or fixed).
     """
     
     def __init__(self,
@@ -54,34 +54,29 @@ class ActLayer(nnx.Module):
         Example:
             >>> layer = ActLayer(n_in=2, n_out=5, N=4, train_basis=True, seed=42)
         """
-        # Setup basic parameters
-        self.n_in = n_in
-        self.n_out = n_out
-        self.N = N
-        
         # Setup nnx rngs
         self.rngs = nnx.Rngs(seed)
         
         # Initialize betas - shape (n_out, N)
         # Paper: std = 1/sqrt(N) for balanced initialization
-        std_beta = jnp.sqrt(1.0 / self.N)
+        std_beta = jnp.sqrt(1.0 / N)
         self.beta = nnx.Param(nnx.initializers.normal(stddev=std_beta)(
-                        self.rngs.params(), (self.n_out, self.N), jnp.float32))
+                        self.rngs.params(), (n_out, N), jnp.float32))
 
         # Initialize Lambdas - shape (n_out, n_in)
         # Paper: std = 1/sqrt(d) for balanced initialization
-        std_lambda = jnp.sqrt(1.0 / self.n_in)
+        std_lambda = jnp.sqrt(1.0 / n_in)
         self.Lambda = nnx.Param(nnx.initializers.normal(stddev=std_lambda)(
-                        self.rngs.params(), (self.n_out, self.n_in), jnp.float32))
+                        self.rngs.params(), (n_out, n_in), jnp.float32))
 
         # Initialize omegas (frequencies) - shape (N,)
         # Paper: ω_i ~ N(0, 1), initialized from standard normal
         omega_init = nnx.initializers.normal(stddev=1.0)(
-                        self.rngs.params(), (self.N,), jnp.float32)
+                        self.rngs.params(), (N,), jnp.float32)
         
         # Initialize phases - shape (N,)
         # Paper: p_i initialized at 0
-        phase_init = jnp.zeros((self.N,))
+        phase_init = jnp.zeros((N,))
         
         # Set omega and phase as trainable (Param) or fixed (Variable) based on train_basis
         if train_basis:
@@ -195,20 +190,22 @@ class ActNet(nnx.Module):
     by Leonardo Ferreira Guilhoto and Paris Perdikaris (arXiv:2410.01990)
 
     Attributes:
-        layer_dims (List[int]):
-            Defines the network in terms of nodes. E.g. [2,5,1] is a network with 2 layers.
-        N (int):
-            Number of basis functions per ActLayer (paper recommends N=4).
+        rngs (nnx.Rngs):
+            Random number generator state.
         add_bias (bool):
             Whether to add learnable bias after each ActLayer.
         omega0 (float):
-            Frequency multiplier for input (paper's Appendix D.1).
+            Frequency multiplier for input.
         use_projections (bool):
             Whether to use input/output linear projections.
-        train_basis (bool):
-            Whether the basis function parameters (omega and phase) are trainable.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        input_proj (nnx.Linear, optional):
+            Input projection layer if use_projections is True.
+        layers (nnx.List):
+            List of ActLayer instances.
+        output_proj (nnx.Linear, optional):
+            Output projection layer if use_projections is True.
+        biases (nnx.List, optional):
+            List of bias parameters if add_bias is True.
     """
     
     def __init__(self, 

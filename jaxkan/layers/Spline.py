@@ -22,22 +22,20 @@ class BaseLayer(nnx.Module):
             Number of layer's outgoing nodes.
         k (int):
             Order of the spline basis functions.
-        G (int):
-            Number of grid intervals.
-        grid_range (tuple):
-            An initial range for the grid's ends, although adaptivity can completely change it.
-        grid_e (float):
-            Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
         residual (Union[nnx.Module, None]):
             Function that is applied on samples to calculate residual activation.
-        external_weights (bool):
-            Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
-        init_scheme (Union[dict, None]):
-            Dictionary that defines how the trainable parameters of the layer are initialized.
-        add_bias (bool):
-            Boolean that controls wether bias terms are also included during the forward pass or not.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        rngs (nnx.Rngs):
+            Random number generator state.
+        grid (BaseGrid):
+            Grid object for spline basis functions.
+        c_spl (Union[nnx.Param, None]):
+            Spline weights if external_weights is True, else None.
+        c_basis (nnx.Param):
+            Trainable coefficients for the basis functions.
+        c_res (Union[nnx.Param, None]):
+            Trainable coefficients for residual activation if residual is not None.
+        bias (Union[nnx.Param, None]):
+            Bias parameter if add_bias is True, else None.
     """
     
     def __init__(self,
@@ -85,7 +83,6 @@ class BaseLayer(nnx.Module):
         self.n_in = n_in
         self.n_out = n_out
         self.k = k
-        self.grid_range = grid_range
         self.residual = residual
 
         # Setup nnx rngs
@@ -598,22 +595,20 @@ class SplineLayer(nnx.Module):
             Number of layer's outgoing nodes.
         k (int):
             Order of the spline basis functions.
-        G (int):
-            Number of grid intervals.
-        grid_range (tuple):
-            An initial range for the grid's ends, although adaptivity can completely change it.
-        grid_e (float):
-            Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
         residual (Union[nnx.Module, None]):
             Function that is applied on samples to calculate residual activation.
-        external_weights (bool):
-            Boolean that controls if the trainable weights of shape (n_out, n_in) applied to the splines should be used.
-        init_scheme (Union[dict, None]):
-            Dictionary that defines how the trainable parameters of the layer are initialized.
-        add_bias (bool):
-            Boolean that controls wether bias terms are also included during the forward pass or not.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        rngs (nnx.Rngs):
+            Random number generator state.
+        grid (SplineGrid):
+            Grid object for spline basis functions.
+        c_spl (Union[nnx.Param, None]):
+            Spline weights if external_weights is True, else None.
+        c_basis (nnx.Param):
+            Trainable coefficients for the basis functions.
+        c_res (Union[nnx.Param, None]):
+            Trainable coefficients for residual activation if residual is not None.
+        bias (Union[nnx.Param, None]):
+            Bias parameter if add_bias is True, else None.
     """
     
     def __init__(self,
@@ -661,7 +656,6 @@ class SplineLayer(nnx.Module):
         self.n_in = n_in
         self.n_out = n_out
         self.k = k
-        self.grid_range = grid_range
         self.residual = residual
 
         # Setup nnx rngs

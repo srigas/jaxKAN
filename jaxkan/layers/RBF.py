@@ -21,22 +21,22 @@ class RBFLayer(nnx.Module):
             Number of layer's outgoing nodes.
         D (int):
             Number of basis functions.
-        kernel (Union[dict, None]):
-            Kernel to be used for the RBFs.
-        grid_range (tuple):
-            An initial range for the grid's ends, although adaptivity can completely change it.
-        grid_e (float):
-            Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
+        kernel (dict):
+            Kernel configuration for the RBFs.
         residual (Union[nnx.Module, None]):
             Function that is applied on samples to calculate residual activation.
-        external_weights (bool):
-            Boolean that controls if the trainable weights (n_out, n_in) should be applied to the activations.
-        init_scheme (Union[dict, None]):
-            Dictionary that defines how the trainable parameters of the layer are initialized.
-        add_bias (bool):
-            Boolean that controls wether bias terms are also included during the forward pass or not.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        rngs (nnx.Rngs):
+            Random number generator state.
+        grid (RBFGrid):
+            Grid object for RBF basis functions.
+        bias (Union[nnx.Param, None]):
+            Bias parameter if add_bias is True, else None.
+        c_ext (Union[nnx.Param, None]):
+            External weights if external_weights is True, else None.
+        c_basis (nnx.Param):
+            Trainable coefficients for the basis functions.
+        c_res (Union[nnx.Param, None]):
+            Trainable coefficients for residual activation if residual is not None.
     """
     
     def __init__(self, n_in: int = 2, n_out: int = 5, D: int = 5, kernel: Union[dict, None] = None,
@@ -84,7 +84,6 @@ class RBFLayer(nnx.Module):
         self.n_out = n_out
         self.D = D
         self.kernel = kernel
-        self.grid_range = grid_range
         self.residual = residual
 
         # Setup nnx rngs

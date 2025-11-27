@@ -21,14 +21,20 @@ class SineLayer(nnx.Module):
             Number of basis functions.
         residual (Union[nnx.Module, None]):
             Function that is applied on samples to calculate residual activation.
-        external_weights (bool):
-            Boolean that controls if the trainable weights (n_out, n_in) should be applied to the activations.
-        init_scheme (Union[dict, None]):
-            Dictionary that defines how the trainable parameters of the layer are initialized.
-        add_bias (bool):
-            Boolean that controls wether bias terms are also included during the forward pass or not.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        rngs (nnx.Rngs):
+            Random number generator state.
+        bias (Union[nnx.Param, None]):
+            Bias parameter if add_bias is True, else None.
+        omega (nnx.Param):
+            Trainable frequency parameters.
+        phase (nnx.Param):
+            Trainable phase parameters.
+        c_ext (Union[nnx.Param, None]):
+            External weights if external_weights is True, else None.
+        c_basis (nnx.Param):
+            Trainable coefficients for the basis functions.
+        c_res (Union[nnx.Param, None]):
+            Trainable coefficients for residual activation if residual is not None.
     """
     
     def __init__(self, n_in: int = 2, n_out: int = 5, D: int = 5,

@@ -118,21 +118,21 @@ class RGAKAN(nnx.Module):
             Hidden layer dimension.
         D (int):
             Degree of Chebyshev polynomials.
-        PE (PeriodEmbedder, optional):
+        PE (Union[PeriodEmbedder, None]):
             Periodic embedder if period_axes is provided.
-        FE (RFFEmbedder, optional):
+        FE (Union[RFFEmbedder, None]):
             Random Fourier Features embedder if rff_std is provided.
-        SineBasis (SineLayer, optional):
+        SineBasis (Union[SineLayer, None]):
             Sine basis layer if sine_D is provided.
         U (Layer):
             First gating network.
         V (Layer):
             Second gating network.
-        blocks (list):
+        blocks (nnx.List):
             List of RGABlock instances.
-        OutBasis (nnx.Param, optional):
+        OutBasis (Union[nnx.Param, None]):
             Physics-informed output coefficients if pi_init is True.
-        OutLayer (Layer, optional):
+        OutLayer (Union[Layer, None]):
             Standard output layer if pi_init is False.
     """
 

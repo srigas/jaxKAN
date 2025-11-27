@@ -19,12 +19,12 @@ class FourierLayer(nnx.Module):
             Number of layer's outgoing nodes.
         D (int):
             Order of Fourier sum.
-        smooth_init (bool):
-            Whether to initialize Fourier coefficients with smoothening.
-        add_bias (bool):
-            Boolean that controls wether bias terms are also included during the forward pass or not.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        bias (Union[nnx.Param, None]):
+            Bias parameter if add_bias is True, else None.
+        c_cos (nnx.Param):
+            Trainable cosine coefficients.
+        c_sin (nnx.Param):
+            Trainable sine coefficients.
     """
     
     def __init__(self, n_in: int = 2, n_out: int = 5, D: int = 5,

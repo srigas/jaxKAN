@@ -17,16 +17,14 @@ class Dense(nnx.Module):
     KAN architectures like KKAN (see jaxkan.models module).
 
     Attributes:
-        n_in (int):
-            Number of input features.
-        n_out (int):
-            Number of output features.
-        init_scheme (str):
-            Initialization scheme for weight matrix W.
-        add_bias (bool):
-            Whether to include a bias term.
-        seed (int):
-            Random seed for initialization.
+        rngs (nnx.Rngs):
+            Random number generator state.
+        W (nnx.Param):
+            Weight matrix.
+        g (nnx.Param):
+            Scale parameter for weight normalization.
+        b (Union[nnx.Param, None]):
+            Bias parameter if add_bias is True, else None.
     """
     
     def __init__(self, n_in: int, n_out: int, init_scheme: str = 'glorot',
@@ -56,16 +54,11 @@ class Dense(nnx.Module):
         Example:
             >>> layer = Dense(n_in=64, n_out=32, init_scheme='glorot', add_bias=True, seed=42)
         """
-        self.n_in = n_in
-        self.n_out = n_out
-        self.init_scheme = init_scheme.lower()
-        self.add_bias = add_bias
-        
         # Setup nnx rngs
         self.rngs = nnx.Rngs(seed)
         
         # Get the initializer based on init_scheme
-        initializer = self._get_initializer(self.init_scheme)
+        initializer = self._get_initializer(init_scheme.lower())
         
         # Initialize weight matrix W
         # Shape: (n_in, n_out)

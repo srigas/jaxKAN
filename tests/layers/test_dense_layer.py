@@ -29,8 +29,6 @@ def test_dense_layer_initialization(seed, layer_params):
     """Test that Dense layer initializes correctly."""
     layer = Dense(**layer_params, seed=seed)
     
-    assert layer.n_in == layer_params["n_in"], "n_in not set correctly"
-    assert layer.n_out == layer_params["n_out"], "n_out not set correctly"
     assert layer.W[...].shape == (layer_params["n_in"], layer_params["n_out"]), "W shape incorrect"
     assert layer.g[...].shape == (layer_params["n_out"],), "g shape incorrect"
     assert layer.b[...].shape == (layer_params["n_out"],), "b shape incorrect"
