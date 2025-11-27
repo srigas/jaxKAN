@@ -48,6 +48,12 @@ KAN Layer Classes
    :undoc-members:
    :show-inheritance:
    :special-members: __init__, __call__
+   
+.. automodule:: jaxkan.layers.Dense
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
 
 .. automodule:: jaxkan.layers.utils
    :members:
@@ -60,6 +66,24 @@ KAN Models
 --------------
 
 .. automodule:: jaxkan.models.KAN
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+
+.. automodule:: jaxkan.models.RGAKAN
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+
+.. automodule:: jaxkan.models.ActNet
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+
+.. automodule:: jaxkan.models.KKAN
    :members:
    :undoc-members:
    :show-inheritance:
