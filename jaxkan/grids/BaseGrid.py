@@ -18,6 +18,8 @@ class BaseGrid:
             An initial range for the grid's ends, although adaptivity can completely change it.
         grid_e (float):
             Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
+        item (jnp.array):
+            The actual grid array, shape (n_in*n_out, G + 2k + 1).
     """
     
     def __init__(self, n_in: int = 2, n_out: int = 5, k: int = 3,

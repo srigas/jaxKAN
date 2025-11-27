@@ -12,14 +12,8 @@ class KAN(nnx.Module):
     KAN class, corresponding to a network of KAN Layers.
 
     Attributes:
-        layer_dims (List[int]):
-            Defines the network in terms of nodes. E.g. [4,5,1] is a network with 2 layers: one with n_in=4 and n_out=5 and one with n_in=5 and n_out = 1.
-        layer_type (str):
-            Type of layer to use (e.g., 'base').
-        required_parameters (dict):
-            Dictionary containing parameters required for the chosen layer type.
-        seed (int):
-            Random key selection for initializations wherever necessary.
+        layers (nnx.List):
+            List of KAN layer instances.
     """
     
     def __init__(self, layer_dims: List[int], layer_type: str = "base",
@@ -42,10 +36,8 @@ class KAN(nnx.Module):
             >>> req_params = {'k': 3, 'G': 5}
             >>> model = KAN(layer_dims = [2,5,1], layer_type='base', required_parameters=req_params, seed=42)
         """
-        self.layer_type = layer_type.lower()
-        
         # Get the corresponding layer class based on layer_type
-        LayerClass = get_layer(self.layer_type)
+        LayerClass = get_layer(layer_type.lower())
             
         if required_parameters is None:
             raise ValueError("required_parameters must be provided as a dictionary for the selected layer_type.")

@@ -17,3 +17,4 @@ The following list of tutorials provides a hands-on introduction to using jaxKAN
    Tutorial 7 - Adaptive State Transition
    Tutorial 8 - Adaptive PIKANs
    Tutorial 9 - Inverse PDE Problem
+   Tutorial 10 - Advanced Models for PDEs

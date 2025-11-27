@@ -16,6 +16,8 @@ class SplineGrid:
             An initial range for the grid's ends, although adaptivity can completely change it.
         grid_e (float):
             Parameter that defines if the grids are uniform (grid_e = 1.0) or sample-dependent (grid_e = 0.0). Intermediate values correspond to a linear mixing of the two cases.
+        item (jnp.array):
+            The actual grid array, shape (n_nodes, G + 2k + 1).
     """
     
     def __init__(self, n_nodes: int = 2, k: int = 3, G: int = 3, grid_range: tuple = (-1,1), grid_e: float = 0.05):

@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from flax import nnx
 
 from jaxkan.models.KAN import KAN
-from jaxkan.models.utils import count_params, get_frob, batched_frob, get_complexity
+from jaxkan.models.utils import count_params, get_frob, batched_frob, get_complexity, PeriodEmbedder, RFFEmbedder, get_activation
 
 
 @pytest.fixture
@@ -194,3 +194,125 @@ def test_count_params_consistency():
     params2 = count_params(model)
     
     assert params1 == params2, "count_params should be deterministic"
+
+
+# PeriodEmbedder Tests
+def test_period_embedder_initialization():
+    """Test PeriodEmbedder initialization."""
+    period_axes = {0: (2.0 * jnp.pi, False), 1: (jnp.pi, True)}
+    embedder = PeriodEmbedder(period_axes)
+    
+    assert hasattr(embedder.axes, '0')
+    assert hasattr(embedder.axes, '1')
+
+
+def test_period_embedder_forward():
+    """Test PeriodEmbedder forward pass."""
+    period_axes = {1: (jnp.pi, False)}
+    embedder = PeriodEmbedder(period_axes)
+    
+    x = jnp.array([[1.0, 0.5], [2.0, 1.0]])
+    y = embedder(x)
+    
+    # Axis 0 unchanged, axis 1 becomes [cos, sin]
+    assert y.shape == (2, 3), "Output shape should be (2, 3)"
+
+
+def test_period_embedder_trainable():
+    """Test PeriodEmbedder with trainable period."""
+    period_axes = {0: (2.0, True)}
+    embedder = PeriodEmbedder(period_axes)
+    
+    x = jnp.array([[1.0], [2.0]])
+    y = embedder(x)
+    
+    assert y.shape == (2, 2), "Should produce [cos, sin] for single axis"
+    assert jnp.all(jnp.isfinite(y)), "Output should be finite"
+
+
+def test_period_embedder_multiple_axes():
+    """Test PeriodEmbedder with multiple periodic axes."""
+    period_axes = {0: (2.0 * jnp.pi, False), 2: (jnp.pi, False)}
+    embedder = PeriodEmbedder(period_axes)
+    
+    x = jnp.array([[1.0, 0.5, 0.3], [2.0, 1.0, 0.6]])
+    y = embedder(x)
+    
+    # Axes 0 and 2 become [cos, sin], axis 1 unchanged
+    assert y.shape == (2, 5), "Output shape should be (2, 5)"
+
+
+# RFFEmbedder Tests
+def test_rff_embedder_initialization():
+    """Test RFFEmbedder initialization."""
+    embedder = RFFEmbedder(std=1.0, n_in=2, embed_dim=256, seed=42)
+    
+    assert embedder.B[...].shape == (2, 128), "B matrix should be (n_in, embed_dim//2)"
+
+
+def test_rff_embedder_forward():
+    """Test RFFEmbedder forward pass."""
+    embedder = RFFEmbedder(std=1.0, n_in=2, embed_dim=256, seed=42)
+    
+    x = jnp.array([[1.0, 0.5], [2.0, 1.0]])
+    y = embedder(x)
+    
+    assert y.shape == (2, 256), "Output shape should be (batch, embed_dim)"
+    assert jnp.all(jnp.isfinite(y)), "Output should be finite"
+
+
+def test_rff_embedder_deterministic():
+    """Test RFFEmbedder produces consistent results with same seed."""
+    embedder1 = RFFEmbedder(std=1.0, n_in=2, embed_dim=128, seed=42)
+    embedder2 = RFFEmbedder(std=1.0, n_in=2, embed_dim=128, seed=42)
+    
+    x = jnp.array([[1.0, 0.5]])
+    y1 = embedder1(x)
+    y2 = embedder2(x)
+    
+    assert jnp.allclose(y1, y2), "Same seed should produce same initialization and output"
+
+
+# get_activation tests
+def test_get_activation_returns_callable():
+    """Test that get_activation returns a callable function."""
+    activation = get_activation('tanh')
+    
+    assert callable(activation), "get_activation should return a callable"
+
+
+def test_get_activation_common_functions():
+    """Test get_activation with common activation functions."""
+    activations = ['tanh', 'relu', 'silu', 'gelu', 'sigmoid']
+    x = jnp.array([-1.0, 0.0, 1.0])
+    
+    for name in activations:
+        act_fn = get_activation(name)
+        y = act_fn(x)
+        
+        assert y.shape == x.shape, f"Activation {name} changed shape"
+        assert jnp.all(jnp.isfinite(y)), f"Activation {name} produced non-finite values"
+
+
+def test_get_activation_invalid():
+    """Test that get_activation raises ValueError for unknown activation."""
+    with pytest.raises(ValueError, match="Unknown activation"):
+        get_activation('invalid_activation')
+
+
+def test_get_activation_output_ranges():
+    """Test that activations produce expected output ranges."""
+    x = jnp.linspace(-3.0, 3.0, 100)
+    
+    # tanh should be in [-1, 1]
+    tanh_out = get_activation('tanh')(x)
+    assert jnp.all(tanh_out >= -1.0) and jnp.all(tanh_out <= 1.0), "tanh should be in [-1, 1]"
+    
+    # sigmoid should be in [0, 1]
+    sigmoid_out = get_activation('sigmoid')(x)
+    assert jnp.all(sigmoid_out >= 0.0) and jnp.all(sigmoid_out <= 1.0), "sigmoid should be in [0, 1]"
+    
+    # relu should be >= 0
+    relu_out = get_activation('relu')(x)
+    assert jnp.all(relu_out >= 0.0), "relu should be >= 0"
+
