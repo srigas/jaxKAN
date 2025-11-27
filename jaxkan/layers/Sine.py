@@ -144,7 +144,7 @@ class SineLayer(nnx.Module):
 
         # Get basis
         eps = 1e-8 # for division stability
-        B = (s + mu)/(std + eps) # (batch, n_in, D)
+        B = (s - mu)/(std + eps) # (batch, n_in, D)
 
         return B
 
