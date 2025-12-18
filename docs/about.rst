@@ -15,11 +15,13 @@ Research
 
 If you have used jaxKAN in your research, we'd love to hear from you! Below, you can find a list of academic publications that have used jaxKAN.
 
+- Cerardi, N., Tolley, E., & Mishra, A. (2025). Solving the Cosmological Vlasov-Poisson Equations with Physics-Informed Kolmogorov-Arnold Networks (No. arXiv:2512.11795). arXiv. https://doi.org/10.48550/arXiv.2512.11795 | `GitHub Reference <https://github.com/nicolas-cerardi/cdm-pikan>`_
+
 - Daniels, M., & Rigollet, P. (2025). Splat regression models (No. arXiv:2511.14042). arXiv. https://doi.org/10.48550/arXiv.2511.14042
 
-- Rigas, S., Verma, D., Alexandridis, G., & Wang, Y. (2025). Initialization schemes for kolmogorov-arnold networks: An empirical study. arXiv. https://doi.org/10.48550/ARXIV.2509.03417
+- Rigas, S., Verma, D., Alexandridis, G., & Wang, Y. (2025). Initialization schemes for Kolmogorov-Arnold networks: An empirical study. arXiv. https://doi.org/10.48550/ARXIV.2509.03417 | `GitHub Reference <https://github.com/srigas/KAN_Initialization_Schemes>`_
 
-- Rigas, S., Anagnostopoulos, F., Papachristou, M., & Alexandridis, G. (2025). Towards deep physics-informed kolmogorov-arnold networks. arXiv. https://doi.org/10.48550/ARXIV.2510.23501
+- Rigas, S., Anagnostopoulos, F., Papachristou, M., & Alexandridis, G. (2025). Training deep physics-informed kolmogorov-arnold networks. arXiv. https://doi.org/10.48550/ARXIV.2510.23501 | `GitHub Reference <https://github.com/srigas/RGA-KANs>`_
 
 - Howard, A. A., Jacob, B., & Stinis, P. (2025). Multifidelity kolmogorov–arnold networks. Machine Learning: Science and Technology, 6(3), 035038. https://doi.org/10.1088/2632-2153/adf702
 
@@ -27,4 +29,4 @@ If you have used jaxKAN in your research, we'd love to hear from you! Below, you
 
 - Howard, A. A., Jacob, B., Helfert, S., Heinlein, A., & Stinis, P. (2024). Finite basis Kolmogorov-Arnold networks: Domain decomposition for data-driven and physics-informed problems. arXiv. https://doi.org/10.48550/ARXIV.2406.19662
 
-- Rigas, S., Papachristou, M., Papadopoulos, T., Anagnostopoulos, F., & Alexandridis, G. (2024). Adaptive training of grid-dependent physics-informed kolmogorov-arnold networks. IEEE Access, 12, 176982–176998. https://doi.org/10.1109/ACCESS.2024.3504962
+- Rigas, S., Papachristou, M., Papadopoulos, T., Anagnostopoulos, F., & Alexandridis, G. (2024). Adaptive training of grid-dependent physics-informed kolmogorov-arnold networks. IEEE Access, 12, 176982–176998. https://doi.org/10.1109/ACCESS.2024.3504962 | `GitHub Reference <https://github.com/srigas/jaxKAN>`_
