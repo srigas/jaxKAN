@@ -109,7 +109,8 @@ class RGABlock(nnx.Module):
 class RGAKAN(nnx.Module):
     """
     Residual-Gated Adaptive Kolmogorov-Arnold Network (RGAKAN).
-    See paper "Towards Deep Physics-Informed Kolmogorov-Arnold Networks".
+    See paper "Training Deep Physics-Informed Kolmogorov-Arnold Networks".
+    https://www.sciencedirect.com/science/article/pii/S0045782526000356
 
     Attributes:
         pi_init (bool):

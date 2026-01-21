@@ -398,7 +398,8 @@ class LegendreLayer(nnx.Module):
                 self.rngs.params(), (self.n_out, self.n_in, ext_dim), jnp.float32
             )
 
-        # Glorot-like initialization as presented in the paper "Towards Deep Physics-Informed Kolmogorov-Arnold Networks"
+        # Glorot-like initialization as presented in the paper "Training Deep Physics-Informed Kolmogorov-Arnold Networks"
+        # https://www.sciencedirect.com/science/article/pii/S0045782526000356
         # The main difference is that we do not aggregate over all sigmas, each mode has its own, hence "fine grained"
         elif init_type == "glorot_fine":
 
