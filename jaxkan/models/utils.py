@@ -314,9 +314,6 @@ def get_adam(
     """
     Create an Adam optimizer with optional learning rate scheduling and warmup.
     
-    This function provides a convenient interface for creating Adam optimizers with 
-    various learning rate schedules, commonly used in training KANs and PIKANs.
-    
     Args:
         learning_rate (float):
             Base learning rate. Default is 1e-3.
@@ -464,3 +461,75 @@ def get_adam(
     )
     
     return tx
+
+
+def get_lbfgs(
+    learning_rate: float = None,
+    memory_size: int = 10,
+    scale_init_precond: bool = True,
+    linesearch: any = None
+):
+    """
+    Create an L-BFGS optimizer.
+    
+    Note: L-BFGS requires special handling when used with Flax NNX. You must pass
+    `value`, `value_fn`, and `model` to the optimizer's update method. The `value_fn` 
+    should be a function that takes the model and returns the loss value.
+    
+    Args:
+        learning_rate (float, optional):
+            Initial learning rate. If None, the optimizer uses its own line search
+            to determine the step size. Default is None.
+            
+        memory_size (int):
+            Number of past updates to keep in memory to approximate the Hessian inverse.
+            Larger values require more memory but may lead to better convergence.
+            Default is 10.
+            
+        scale_init_precond (bool):
+            Whether to use a scaled identity as the initial preconditioner.
+            Default is True.
+            
+        linesearch (optax.GradientTransformation, optional):
+            Custom line search transformation. If None, uses the default zoom line search.
+            Default is None.
+    
+    Returns:
+        optax.GradientTransformationExtraArgs:
+            Configured L-BFGS optimizer.
+    
+    Example:
+        >>> from jaxkan.models.utils import get_lbfgs
+        >>> from jaxkan.models.KAN import KAN
+        >>> from flax import nnx
+        >>> import jax.numpy as jnp
+        
+        >>> # Create model
+        >>> model = KAN([2, 5, 1], 'spline', {'k': 3, 'G': 5}, 42)
+        >>> 
+        >>> # Create L-BFGS optimizer
+        >>> optimizer_tx = get_lbfgs(memory_size=10)
+        >>> optimizer = nnx.Optimizer(model, optimizer_tx, wrt=nnx.Param)
+        >>> 
+        >>> # Define loss function
+        >>> def loss_fn(model):
+        ...     # Your loss computation here
+        ...     return jnp.sum(model(x) ** 2)
+        >>> 
+        >>> # Training step with L-BFGS
+        >>> def train_step(model, optimizer):
+        ...     loss, grads = nnx.value_and_grad(loss_fn)(model)
+        ...     # L-BFGS requires value and value_fn (model and grads are positional)
+        ...     optimizer.update(model, grads, value=loss, value_fn=loss_fn)
+        ...     return loss
+    """
+    import optax
+    
+    optimizer = optax.lbfgs(
+        learning_rate=learning_rate,
+        memory_size=memory_size,
+        scale_init_precond=scale_init_precond,
+        linesearch=linesearch
+    )
+    
+    return optimizer

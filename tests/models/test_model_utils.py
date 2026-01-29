@@ -487,3 +487,76 @@ def test_get_adam_staircase_decay(simple_model):
     opt_state = optimizer.init(simple_model)
     assert opt_state is not None
 
+
+# get_lbfgs tests
+def test_get_lbfgs_import():
+    """Test that get_lbfgs can be imported."""
+    from jaxkan.models.utils import get_lbfgs
+    assert callable(get_lbfgs)
+
+
+def test_get_lbfgs_default_params():
+    """Test get_lbfgs with default parameters."""
+    from jaxkan.models.utils import get_lbfgs
+    
+    optimizer = get_lbfgs()
+    assert optimizer is not None
+
+
+def test_get_lbfgs_custom_memory_size():
+    """Test get_lbfgs with custom memory size."""
+    from jaxkan.models.utils import get_lbfgs
+    
+    optimizer = get_lbfgs(memory_size=20)
+    assert optimizer is not None
+
+
+def test_get_lbfgs_with_learning_rate():
+    """Test get_lbfgs with specified learning rate."""
+    from jaxkan.models.utils import get_lbfgs
+    
+    optimizer = get_lbfgs(learning_rate=1e-2)
+    assert optimizer is not None
+
+
+def test_get_lbfgs_initialization(simple_model):
+    """Test that L-BFGS optimizer can be initialized with model parameters."""
+    from jaxkan.models.utils import get_lbfgs
+    import optax
+    
+    optimizer_tx = get_lbfgs(memory_size=10)
+    
+    # Extract parameters for optax (as State object)
+    params = nnx.state(simple_model, nnx.Param)
+    
+    # Initialize optimizer state with parameters
+    opt_state = optimizer_tx.init(params)
+    
+    assert opt_state is not None
+
+
+def test_get_lbfgs_update_with_value_fn(simple_model):
+    """Test that L-BFGS can perform update with value and value_fn."""
+    from jaxkan.models.utils import get_lbfgs
+    from flax import nnx
+    import optax
+    
+    # Create optimizer
+    optimizer_tx = get_lbfgs(memory_size=5)
+    optimizer = nnx.Optimizer(simple_model, optimizer_tx, wrt=nnx.Param)
+    
+    # Create dummy data
+    x = jax.random.uniform(jax.random.key(0), (10, 2))
+    
+    # Define loss function
+    def loss_fn(model):
+        return jnp.sum(model(x) ** 2)
+    
+    # Compute loss and gradients
+    loss, grads = nnx.value_and_grad(loss_fn)(simple_model)
+    
+    # Perform update with value and value_fn (model and grads are positional in Flax 0.11.0+)
+    optimizer.update(simple_model, grads, value=loss, value_fn=loss_fn)
+    
+    # Check that step was incremented
+    assert optimizer.step[...] == 1
