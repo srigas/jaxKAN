@@ -316,3 +316,247 @@ def test_get_activation_output_ranges():
     relu_out = get_activation('relu')(x)
     assert jnp.all(relu_out >= 0.0), "relu should be >= 0"
 
+
+# get_optimizer tests
+def test_get_adam_import():
+    """Test that get_adam can be imported."""
+    from jaxkan.models.utils import get_adam
+    assert callable(get_adam)
+
+
+def test_get_adam_constant_lr(simple_model):
+    """Test get_adam with constant learning rate."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3
+    )
+    
+    # Test that optimizer can be initialized
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+def test_get_adam_exponential_decay(simple_model):
+    """Test get_adam with exponential decay schedule."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        schedule_type='exponential',
+        decay_steps=5000,
+        decay_rate=0.9
+    )
+    
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+def test_get_adam_with_warmup(simple_model):
+    """Test get_adam with warmup."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        schedule_type='exponential',
+        decay_steps=5000,
+        decay_rate=0.9,
+        warmup_steps=1000
+    )
+    
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+def test_get_adam_cosine_schedule(simple_model):
+    """Test get_adam with cosine annealing."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        schedule_type='cosine',
+        decay_steps=10000
+    )
+    
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+def test_get_adam_polynomial_schedule(simple_model):
+    """Test get_adam with polynomial decay."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        schedule_type='polynomial',
+        decay_steps=5000,
+        decay_rate=2.0
+    )
+    
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+def test_get_adam_custom_params(simple_model):
+    """Test get_adam with custom Adam parameters."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        b1=0.95,
+        b2=0.999,
+        eps=1e-7
+    )
+    
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+def test_get_adam_invalid_schedule():
+    """Test that get_adam raises error for invalid schedule type."""
+    from jaxkan.models.utils import get_adam
+    
+    with pytest.raises(ValueError, match="Unknown schedule_type"):
+        get_adam(
+            learning_rate=1e-3,
+            schedule_type='invalid_schedule'
+        )
+
+
+def test_get_adam_initialization_with_params(simple_model):
+    """Test that optimizer can be initialized with model parameters."""
+    from jaxkan.models.utils import get_adam
+    import optax
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        schedule_type='exponential',
+        decay_steps=5000,
+        decay_rate=0.9,
+        warmup_steps=1000
+    )
+    
+    # Extract parameters for optax (as State object)
+    params = nnx.state(simple_model, nnx.Param)
+    
+    # Initialize optimizer state with parameters
+    opt_state = optimizer.init(params)
+    
+    assert opt_state is not None
+    
+    # Test that we can perform an update with proper gradients
+    # Create dummy gradients with same structure as params
+    grads = jax.tree.map(lambda x: jnp.ones_like(x), params)
+    
+    # Perform update
+    updates, new_opt_state = optimizer.update(grads, opt_state, params)
+    
+    assert updates is not None
+    assert new_opt_state is not None
+    
+    # Apply updates to parameters
+    new_params = optax.apply_updates(params, updates)
+    assert new_params is not None
+
+
+def test_get_adam_warmup_only(simple_model):
+    """Test optimizer with warmup and constant learning rate after."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        warmup_steps=500
+    )
+    
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+def test_get_adam_staircase_decay(simple_model):
+    """Test optimizer with staircase decay."""
+    from jaxkan.models.utils import get_adam
+    
+    optimizer = get_adam(
+        learning_rate=1e-3,
+        schedule_type='exponential',
+        decay_steps=1000,
+        decay_rate=0.5,
+        staircase=True
+    )
+    
+    opt_state = optimizer.init(simple_model)
+    assert opt_state is not None
+
+
+# get_lbfgs tests
+def test_get_lbfgs_import():
+    """Test that get_lbfgs can be imported."""
+    from jaxkan.models.utils import get_lbfgs
+    assert callable(get_lbfgs)
+
+
+def test_get_lbfgs_default_params():
+    """Test get_lbfgs with default parameters."""
+    from jaxkan.models.utils import get_lbfgs
+    
+    optimizer = get_lbfgs()
+    assert optimizer is not None
+
+
+def test_get_lbfgs_custom_memory_size():
+    """Test get_lbfgs with custom memory size."""
+    from jaxkan.models.utils import get_lbfgs
+    
+    optimizer = get_lbfgs(memory_size=20)
+    assert optimizer is not None
+
+
+def test_get_lbfgs_with_learning_rate():
+    """Test get_lbfgs with specified learning rate."""
+    from jaxkan.models.utils import get_lbfgs
+    
+    optimizer = get_lbfgs(learning_rate=1e-2)
+    assert optimizer is not None
+
+
+def test_get_lbfgs_initialization(simple_model):
+    """Test that L-BFGS optimizer can be initialized with model parameters."""
+    from jaxkan.models.utils import get_lbfgs
+    import optax
+    
+    optimizer_tx = get_lbfgs(memory_size=10)
+    
+    # Extract parameters for optax (as State object)
+    params = nnx.state(simple_model, nnx.Param)
+    
+    # Initialize optimizer state with parameters
+    opt_state = optimizer_tx.init(params)
+    
+    assert opt_state is not None
+
+
+def test_get_lbfgs_update_with_value_fn(simple_model):
+    """Test that L-BFGS can perform update with value and value_fn."""
+    from jaxkan.models.utils import get_lbfgs
+    from flax import nnx
+    import optax
+    
+    # Create optimizer
+    optimizer_tx = get_lbfgs(memory_size=5)
+    optimizer = nnx.Optimizer(simple_model, optimizer_tx, wrt=nnx.Param)
+    
+    # Create dummy data
+    x = jax.random.uniform(jax.random.key(0), (10, 2))
+    
+    # Define loss function
+    def loss_fn(model):
+        return jnp.sum(model(x) ** 2)
+    
+    # Compute loss and gradients
+    loss, grads = nnx.value_and_grad(loss_fn)(simple_model)
+    
+    # Perform update with value and value_fn (model and grads are positional in Flax 0.11.0+)
+    optimizer.update(simple_model, grads, value=loss, value_fn=loss_fn)
+    
+    # Check that step was incremented
+    assert optimizer.step[...] == 1

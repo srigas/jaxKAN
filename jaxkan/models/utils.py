@@ -4,6 +4,8 @@ import numpy as np
 
 from flax import nnx
 
+import optax
+
 
 def get_activation(activation: str = 'tanh'):
     """
@@ -295,3 +297,239 @@ def get_complexity(model, pde_collocs, bc_collocs=None):
     complexity = jnp.mean(batched_frob(model, combined))
     
     return complexity
+
+
+def get_adam(
+    learning_rate: float = 1e-3,
+    schedule_type: str = None,
+    decay_steps: int = 5000,
+    decay_rate: float = 0.9,
+    warmup_steps: int = 0,
+    staircase: bool = False,
+    b1: float = 0.9,
+    b2: float = 0.999,
+    eps: float = 1e-8,
+    **schedule_kwargs
+):
+    """
+    Create an Adam optimizer with optional learning rate scheduling and warmup.
+    
+    Args:
+        learning_rate (float):
+            Base learning rate. Default is 1e-3.
+            
+        schedule_type (str, optional):
+            Type of learning rate schedule. Options:
+            - None: Constant learning rate (default)
+            - 'exponential': Exponential decay schedule
+            - 'cosine': Cosine annealing schedule
+            - 'polynomial': Polynomial decay schedule
+            - 'piecewise_constant': Piecewise constant schedule (requires 'boundaries' and 'values' in schedule_kwargs)
+            
+        decay_steps (int):
+            Number of steps for the learning rate decay schedule. Default is 5000.
+            Used for exponential, cosine, and polynomial schedules.
+            
+        decay_rate (float):
+            Decay rate for exponential schedule. Default is 0.9.
+            For polynomial schedule, this is the 'power' parameter.
+            
+        warmup_steps (int):
+            Number of warmup steps with linear learning rate increase from 0 to learning_rate.
+            Default is 0 (no warmup).
+            
+        staircase (bool):
+            If True, decay the learning rate at discrete intervals (staircase function).
+            Default is False (smooth decay).
+            
+        b1 (float):
+            Exponential decay rate for first moment. Default is 0.9.
+            
+        b2 (float):
+            Exponential decay rate for second moment. Default is 0.999.
+            
+        eps (float):
+            Small constant for numerical stability. Default is 1e-8.
+            
+        **schedule_kwargs:
+            Additional keyword arguments for specific schedules.
+            For piecewise_constant schedule:
+                - boundaries (list): List of step boundaries
+                - values (list): List of learning rate values (must be len(boundaries) + 1)
+    
+    Returns:
+        optax.GradientTransformation:
+            Configured Adam optimizer with learning rate schedule.
+    
+    Example:
+        >>> # Adam with exponential decay and warmup
+        >>> optimizer = get_adam(
+        ...     learning_rate=1e-3,
+        ...     schedule_type='exponential',
+        ...     decay_steps=5000,
+        ...     decay_rate=0.9,
+        ...     warmup_steps=1000,
+        ...     b1=0.9,
+        ...     b2=0.999
+        ... )
+        
+        >>> # Adam with cosine annealing
+        >>> optimizer = get_adam(
+        ...     learning_rate=1e-3,
+        ...     schedule_type='cosine',
+        ...     decay_steps=10000,
+        ...     warmup_steps=500
+        ... )
+        
+        >>> # Adam with constant learning rate
+        >>> optimizer = get_adam(learning_rate=1e-3)
+    """
+    import optax
+    
+    # Create learning rate schedule
+    if schedule_type is None:
+        # Constant learning rate
+        lr_schedule = learning_rate
+        
+    elif schedule_type == 'exponential':
+        # Exponential decay: lr * decay_rate^(step/decay_steps)
+        lr_schedule = optax.exponential_decay(
+            init_value=learning_rate,
+            transition_steps=decay_steps,
+            decay_rate=decay_rate,
+            staircase=staircase
+        )
+        
+    elif schedule_type == 'cosine':
+        # Cosine annealing schedule
+        lr_schedule = optax.cosine_decay_schedule(
+            init_value=learning_rate,
+            decay_steps=decay_steps,
+            alpha=0.0  # Minimum learning rate as fraction of init_value
+        )
+        
+    elif schedule_type == 'polynomial':
+        # Polynomial decay schedule
+        lr_schedule = optax.polynomial_schedule(
+            init_value=learning_rate,
+            end_value=learning_rate * 0.01,  # Decay to 1% of initial value
+            power=decay_rate,  # Using decay_rate as the power parameter
+            transition_steps=decay_steps
+        )
+        
+    elif schedule_type == 'piecewise_constant':
+        # Piecewise constant schedule
+        if 'boundaries' not in schedule_kwargs or 'values' not in schedule_kwargs:
+            raise ValueError("piecewise_constant schedule requires 'boundaries' and 'values' in schedule_kwargs")
+        boundaries = schedule_kwargs.pop('boundaries')
+        values = schedule_kwargs.pop('values')
+        lr_schedule = optax.piecewise_constant_schedule(
+            init_value=values[0],
+            boundaries_and_scales={b: v / values[0] for b, v in zip(boundaries, values[1:])}
+        )
+        
+    else:
+        raise ValueError(
+            f"Unknown schedule_type '{schedule_type}'. "
+            f"Options: None, 'exponential', 'cosine', 'polynomial', 'piecewise_constant'"
+        )
+    
+    # Add warmup if requested
+    if warmup_steps > 0:
+        warmup_schedule = optax.linear_schedule(
+            init_value=0.0,
+            end_value=learning_rate,
+            transition_steps=warmup_steps
+        )
+        
+        # Join warmup and main schedule
+        lr_schedule = optax.join_schedules(
+            schedules=[warmup_schedule, lr_schedule],
+            boundaries=[warmup_steps]
+        )
+    
+    # Check for any remaining unused kwargs
+    if schedule_kwargs:
+        print(f"Warning: Unused schedule kwargs: {list(schedule_kwargs.keys())}")
+    
+    # Create Adam optimizer
+    tx = optax.adam(
+        learning_rate=lr_schedule,
+        b1=b1,
+        b2=b2,
+        eps=eps
+    )
+    
+    return tx
+
+
+def get_lbfgs(
+    learning_rate: float = None,
+    memory_size: int = 10,
+    scale_init_precond: bool = True,
+    linesearch: any = None
+):
+    """
+    Create an L-BFGS optimizer.
+    
+    Note: L-BFGS requires special handling when used with Flax NNX. You must pass
+    `value`, `value_fn`, and `model` to the optimizer's update method. The `value_fn` 
+    should be a function that takes the model and returns the loss value.
+    
+    Args:
+        learning_rate (float, optional):
+            Initial learning rate. If None, the optimizer uses its own line search
+            to determine the step size. Default is None.
+            
+        memory_size (int):
+            Number of past updates to keep in memory to approximate the Hessian inverse.
+            Larger values require more memory but may lead to better convergence.
+            Default is 10.
+            
+        scale_init_precond (bool):
+            Whether to use a scaled identity as the initial preconditioner.
+            Default is True.
+            
+        linesearch (optax.GradientTransformation, optional):
+            Custom line search transformation. If None, uses the default zoom line search.
+            Default is None.
+    
+    Returns:
+        optax.GradientTransformationExtraArgs:
+            Configured L-BFGS optimizer.
+    
+    Example:
+        >>> from jaxkan.models.utils import get_lbfgs
+        >>> from jaxkan.models.KAN import KAN
+        >>> from flax import nnx
+        >>> import jax.numpy as jnp
+        
+        >>> # Create model
+        >>> model = KAN([2, 5, 1], 'spline', {'k': 3, 'G': 5}, 42)
+        >>> 
+        >>> # Create L-BFGS optimizer
+        >>> optimizer_tx = get_lbfgs(memory_size=10)
+        >>> optimizer = nnx.Optimizer(model, optimizer_tx, wrt=nnx.Param)
+        >>> 
+        >>> # Define loss function
+        >>> def loss_fn(model):
+        ...     # Your loss computation here
+        ...     return jnp.sum(model(x) ** 2)
+        >>> 
+        >>> # Training step with L-BFGS
+        >>> def train_step(model, optimizer):
+        ...     loss, grads = nnx.value_and_grad(loss_fn)(model)
+        ...     # L-BFGS requires value and value_fn (model and grads are positional)
+        ...     optimizer.update(model, grads, value=loss, value_fn=loss_fn)
+        ...     return loss
+    """
+    import optax
+    
+    optimizer = optax.lbfgs(
+        learning_rate=learning_rate,
+        memory_size=memory_size,
+        scale_init_precond=scale_init_precond,
+        linesearch=linesearch
+    )
+    
+    return optimizer
