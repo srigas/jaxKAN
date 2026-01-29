@@ -4,6 +4,8 @@ import numpy as np
 
 from flax import nnx
 
+import optax
+
 
 def get_activation(activation: str = 'tanh'):
     """
@@ -295,3 +297,170 @@ def get_complexity(model, pde_collocs, bc_collocs=None):
     complexity = jnp.mean(batched_frob(model, combined))
     
     return complexity
+
+
+def get_adam(
+    learning_rate: float = 1e-3,
+    schedule_type: str = None,
+    decay_steps: int = 5000,
+    decay_rate: float = 0.9,
+    warmup_steps: int = 0,
+    staircase: bool = False,
+    b1: float = 0.9,
+    b2: float = 0.999,
+    eps: float = 1e-8,
+    **schedule_kwargs
+):
+    """
+    Create an Adam optimizer with optional learning rate scheduling and warmup.
+    
+    This function provides a convenient interface for creating Adam optimizers with 
+    various learning rate schedules, commonly used in training KANs and PIKANs.
+    
+    Args:
+        learning_rate (float):
+            Base learning rate. Default is 1e-3.
+            
+        schedule_type (str, optional):
+            Type of learning rate schedule. Options:
+            - None: Constant learning rate (default)
+            - 'exponential': Exponential decay schedule
+            - 'cosine': Cosine annealing schedule
+            - 'polynomial': Polynomial decay schedule
+            - 'piecewise_constant': Piecewise constant schedule (requires 'boundaries' and 'values' in schedule_kwargs)
+            
+        decay_steps (int):
+            Number of steps for the learning rate decay schedule. Default is 5000.
+            Used for exponential, cosine, and polynomial schedules.
+            
+        decay_rate (float):
+            Decay rate for exponential schedule. Default is 0.9.
+            For polynomial schedule, this is the 'power' parameter.
+            
+        warmup_steps (int):
+            Number of warmup steps with linear learning rate increase from 0 to learning_rate.
+            Default is 0 (no warmup).
+            
+        staircase (bool):
+            If True, decay the learning rate at discrete intervals (staircase function).
+            Default is False (smooth decay).
+            
+        b1 (float):
+            Exponential decay rate for first moment. Default is 0.9.
+            
+        b2 (float):
+            Exponential decay rate for second moment. Default is 0.999.
+            
+        eps (float):
+            Small constant for numerical stability. Default is 1e-8.
+            
+        **schedule_kwargs:
+            Additional keyword arguments for specific schedules.
+            For piecewise_constant schedule:
+                - boundaries (list): List of step boundaries
+                - values (list): List of learning rate values (must be len(boundaries) + 1)
+    
+    Returns:
+        optax.GradientTransformation:
+            Configured Adam optimizer with learning rate schedule.
+    
+    Example:
+        >>> # Adam with exponential decay and warmup
+        >>> optimizer = get_adam(
+        ...     learning_rate=1e-3,
+        ...     schedule_type='exponential',
+        ...     decay_steps=5000,
+        ...     decay_rate=0.9,
+        ...     warmup_steps=1000,
+        ...     b1=0.9,
+        ...     b2=0.999
+        ... )
+        
+        >>> # Adam with cosine annealing
+        >>> optimizer = get_adam(
+        ...     learning_rate=1e-3,
+        ...     schedule_type='cosine',
+        ...     decay_steps=10000,
+        ...     warmup_steps=500
+        ... )
+        
+        >>> # Adam with constant learning rate
+        >>> optimizer = get_adam(learning_rate=1e-3)
+    """
+    import optax
+    
+    # Create learning rate schedule
+    if schedule_type is None:
+        # Constant learning rate
+        lr_schedule = learning_rate
+        
+    elif schedule_type == 'exponential':
+        # Exponential decay: lr * decay_rate^(step/decay_steps)
+        lr_schedule = optax.exponential_decay(
+            init_value=learning_rate,
+            transition_steps=decay_steps,
+            decay_rate=decay_rate,
+            staircase=staircase
+        )
+        
+    elif schedule_type == 'cosine':
+        # Cosine annealing schedule
+        lr_schedule = optax.cosine_decay_schedule(
+            init_value=learning_rate,
+            decay_steps=decay_steps,
+            alpha=0.0  # Minimum learning rate as fraction of init_value
+        )
+        
+    elif schedule_type == 'polynomial':
+        # Polynomial decay schedule
+        lr_schedule = optax.polynomial_schedule(
+            init_value=learning_rate,
+            end_value=learning_rate * 0.01,  # Decay to 1% of initial value
+            power=decay_rate,  # Using decay_rate as the power parameter
+            transition_steps=decay_steps
+        )
+        
+    elif schedule_type == 'piecewise_constant':
+        # Piecewise constant schedule
+        if 'boundaries' not in schedule_kwargs or 'values' not in schedule_kwargs:
+            raise ValueError("piecewise_constant schedule requires 'boundaries' and 'values' in schedule_kwargs")
+        boundaries = schedule_kwargs.pop('boundaries')
+        values = schedule_kwargs.pop('values')
+        lr_schedule = optax.piecewise_constant_schedule(
+            init_value=values[0],
+            boundaries_and_scales={b: v / values[0] for b, v in zip(boundaries, values[1:])}
+        )
+        
+    else:
+        raise ValueError(
+            f"Unknown schedule_type '{schedule_type}'. "
+            f"Options: None, 'exponential', 'cosine', 'polynomial', 'piecewise_constant'"
+        )
+    
+    # Add warmup if requested
+    if warmup_steps > 0:
+        warmup_schedule = optax.linear_schedule(
+            init_value=0.0,
+            end_value=learning_rate,
+            transition_steps=warmup_steps
+        )
+        
+        # Join warmup and main schedule
+        lr_schedule = optax.join_schedules(
+            schedules=[warmup_schedule, lr_schedule],
+            boundaries=[warmup_steps]
+        )
+    
+    # Check for any remaining unused kwargs
+    if schedule_kwargs:
+        print(f"Warning: Unused schedule kwargs: {list(schedule_kwargs.keys())}")
+    
+    # Create Adam optimizer
+    tx = optax.adam(
+        learning_rate=lr_schedule,
+        b1=b1,
+        b2=b2,
+        eps=eps
+    )
+    
+    return tx
