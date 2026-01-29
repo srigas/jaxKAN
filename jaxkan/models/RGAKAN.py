@@ -258,17 +258,29 @@ class RGAKAN(nnx.Module):
             >>> C = model._pi_init(ref)
         """
         # Get collocation points for the spatiotemporal domain to impose initial condition
-        t = ref['t'].flatten()[::10] # Downsampled temporal - shape (Nt, )
-        x = ref['x'].flatten() # spatial - shape (Nx, )
-        tt, xx = jnp.meshgrid(t, x, indexing="ij")
-
-        # collocation inputs - shape (batch, 2), batch = Nt*Nx
-        inputs = jnp.hstack([tt.flatten()[:, None], xx.flatten()[:, None]])
-
-        # Get Y for inputs
-        u_0 = ref['usol'][0, :] # initial condition - shape (Nx, )
-        Y = jnp.tile(u_0.flatten(), (t.shape[0], 1)) # shape (Nt, Nx)
-        Y = Y.flatten().reshape(-1, 1) # shape (batch, 1)
+        t = ref['t'].flatten()[::10]  # Downsampled temporal - shape (Nt, )
+        
+        # Check if we have 3D data (t, x, y) or 2D data (t, x)
+        if 'y' in ref:
+            downsample = 10
+            x = ref['x'].flatten()[::downsample]  # spatial - shape (Nx, )
+            y = ref['y'].flatten()[::downsample]  # shape (Ny, )
+            tt, xx, yy = jnp.meshgrid(t, x, y, indexing="ij")
+            # collocation inputs - shape (batch, 3), batch = Nt*Nx*Ny
+            inputs = jnp.hstack([tt.flatten()[:, None], xx.flatten()[:, None], yy.flatten()[:, None]])
+            # Get Y for inputs - initial condition at t=0
+            u_0 = ref['usol'][0, ::downsample, ::downsample]  # shape (Nx, Ny)
+            Y = jnp.tile(u_0.flatten(), (t.shape[0], 1))  # shape (Nt, Nx*Ny)
+            Y = Y.flatten().reshape(-1, 1)  # shape (batch, 1)
+        else:
+            x = ref['x'].flatten()  # spatial - shape (Nx, )
+            tt, xx = jnp.meshgrid(t, x, indexing="ij")
+            # collocation inputs - shape (batch, 2), batch = Nt*Nx
+            inputs = jnp.hstack([tt.flatten()[:, None], xx.flatten()[:, None]])
+            # Get Y for inputs
+            u_0 = ref['usol'][0, :]  # initial condition - shape (Nx, )
+            Y = jnp.tile(u_0.flatten(), (t.shape[0], 1))  # shape (Nt, Nx)
+            Y = Y.flatten().reshape(-1, 1)  # shape (batch, 1)
         
         # Get Φ - essentially do a full forward pass up until the final layer
         if self.PE:
