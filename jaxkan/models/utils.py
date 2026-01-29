@@ -497,39 +497,13 @@ def get_lbfgs(
     Returns:
         optax.GradientTransformationExtraArgs:
             Configured L-BFGS optimizer.
-    
-    Example:
-        >>> from jaxkan.models.utils import get_lbfgs
-        >>> from jaxkan.models.KAN import KAN
-        >>> from flax import nnx
-        >>> import jax.numpy as jnp
-        
-        >>> # Create model
-        >>> model = KAN([2, 5, 1], 'spline', {'k': 3, 'G': 5}, 42)
-        >>> 
-        >>> # Create L-BFGS optimizer
-        >>> optimizer_tx = get_lbfgs(memory_size=10)
-        >>> optimizer = nnx.Optimizer(model, optimizer_tx, wrt=nnx.Param)
-        >>> 
-        >>> # Define loss function
-        >>> def loss_fn(model):
-        ...     # Your loss computation here
-        ...     return jnp.sum(model(x) ** 2)
-        >>> 
-        >>> # Training step with L-BFGS
-        >>> def train_step(model, optimizer):
-        ...     loss, grads = nnx.value_and_grad(loss_fn)(model)
-        ...     # L-BFGS requires value and value_fn (model and grads are positional)
-        ...     optimizer.update(model, grads, value=loss, value_fn=loss_fn)
-        ...     return loss
     """
-    import optax
     
-    optimizer = optax.lbfgs(
+    tx = optax.lbfgs(
         learning_rate=learning_rate,
         memory_size=memory_size,
         scale_init_precond=scale_init_precond,
         linesearch=linesearch
     )
     
-    return optimizer
+    return tx
