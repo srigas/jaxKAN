@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 # -- Project information -----------------------------------------------------
 
 project = 'jaxkan'
-copyright = '2025, Spyros Rigas, Michalis Papachristou'
+copyright = '2026, Spyros Rigas, Michalis Papachristou'
 author = 'Spyros Rigas, Michalis Papachristou'
 
 release = '0.3.5'
