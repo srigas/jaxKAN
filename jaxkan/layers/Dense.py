@@ -5,137 +5,112 @@ from flax import nnx
 from typing import Union
 
 
-class Dense(nnx.Module):
+class DenseLayer(nnx.Module):
     """
-    Weight-normalized Dense layer for use in MLP architectures.
-    
-    This layer implements weight normalization as described in:
-    "Weight Normalization: A Simple Reparameterization to Accelerate Training of Deep Neural Networks"
-    by Salimans & Kingma (arXiv:1602.07868)
+    Dense layer with random weight factorization (RWF) for use in MLP architectures.
     
     Note: This is not a KAN layer, but a standard MLP building block used in advanced
     KAN architectures like KKAN (see jaxkan.models module).
 
     Attributes:
-        rngs (nnx.Rngs):
-            Random number generator state.
-        W (nnx.Param):
-            Weight matrix.
         g (nnx.Param):
-            Scale parameter for weight normalization.
-        b (Union[nnx.Param, None]):
-            Bias parameter if add_bias is True, else None.
+            Scale factor vector of shape (n_out,) from the RWF reparameterization.
+        v (nnx.Param):
+            Direction matrix of shape (n_in, n_out) from the RWF reparameterization.
+        b (nnx.Param or None):
+            Bias vector of shape (n_out,), or None if add_bias is False.
+        activation (callable or None):
+            Activation function applied after the linear transformation, or None.
     """
     
-    def __init__(self, n_in: int, n_out: int, init_scheme: str = 'glorot',
+    def __init__(self, n_in: int, n_out: int, activation = None,
+                 RWF: dict = {"mean": 1.0, "std": 0.1},
                  add_bias: bool = True, seed: int = 42):
         """
-        Initializes a Dense layer with weight normalization.
+        Initializes a Dense layer with RWF.
 
         Args:
             n_in (int):
                 Number of input features.
             n_out (int):
                 Number of output features.
-            init_scheme (str):
-                Initialization scheme for weight matrix W. Options:
-                - 'glorot' or 'xavier': Glorot/Xavier normal initialization (default)
-                - 'glorot_uniform': Glorot/Xavier uniform initialization
-                - 'he' or 'kaiming': He/Kaiming normal initialization
-                - 'he_uniform': He/Kaiming uniform initialization
-                - 'lecun': LeCun normal initialization
-                - 'normal': Standard normal initialization
-                - 'uniform': Uniform initialization in [-1, 1]
-            add_bias (bool):
-                Whether to include a bias term.
-            seed (int):
-                Random seed for initialization.
-                
+            activation (callable, optional):
+                Activation function applied after the linear transformation.
+                Defaults to None.
+            RWF (dict, optional):
+                Dictionary with keys ``'mean'`` and ``'std'`` controlling the
+                log-normal scale of the RWF reparameterization.
+                Defaults to ``{"mean": 1.0, "std": 0.1}``.
+            add_bias (bool, optional):
+                Whether to include a learnable bias term. Defaults to True.
+            seed (int, optional):
+                Random seed for parameter initialization. Defaults to 42.
+
         Example:
-            >>> layer = Dense(n_in=64, n_out=32, init_scheme='glorot', add_bias=True, seed=42)
+            >>> layer = DenseLayer(n_in=64, n_out=32, add_bias=True, seed=42)
         """
         # Setup nnx rngs
-        self.rngs = nnx.Rngs(seed)
+        rngs = nnx.Rngs(seed)
         
-        # Get the initializer based on init_scheme
-        initializer = self._get_initializer(init_scheme.lower())
-        
-        # Initialize weight matrix W
-        # Shape: (n_in, n_out)
-        self.W = nnx.Param(initializer(
-            self.rngs.params(), (n_in, n_out), jnp.float32))
-        
-        # Initialize scale parameter g (one per output feature)
-        # Shape: (n_out,)
-        self.g = nnx.Param(jnp.ones((n_out,)))
-        
-        # Initialize bias parameter b
-        # Shape: (n_out,)
+        # Initialize kernel via RWF - shape (n_in, n_out)
+        mu, sigma = RWF["mean"], RWF["std"]
+
+        # Glorot Initialization
+        stddev = jnp.sqrt(2.0/(n_in + n_out))
+
+        # Weight matrix with shape (n_in, n_out)
+        w = nnx.initializers.normal(stddev=stddev)(
+                rngs.params(), (n_in, n_out), jnp.float32
+            )
+
+        # Reparameterization towards g, v
+        g = nnx.initializers.normal(stddev=sigma)(
+                rngs.params(), (n_out,), jnp.float32
+            )
+        g += mu
+        g = jnp.exp(g) # shape (n_out,)
+        v = w/g # shape (n_in, n_out)
+
+        self.g = nnx.Param(g)
+        self.v = nnx.Param(v)
+
+        # Initialize bias - shape (n_out,)
         if add_bias:
             self.b = nnx.Param(jnp.zeros((n_out,)))
         else:
             self.b = None
 
-    def _get_initializer(self, init_scheme: str):
-        """
-        Returns the appropriate initializer based on the scheme name.
-
-        Args:
-            init_scheme (str):
-                Name of the initialization scheme.
-
-        Returns:
-            initializer:
-                An nnx initializer function.
-        """
-        init_map = {
-            'glorot': nnx.initializers.glorot_normal(),
-            'xavier': nnx.initializers.glorot_normal(),
-            'glorot_uniform': nnx.initializers.glorot_uniform(),
-            'xavier_uniform': nnx.initializers.glorot_uniform(),
-            'he': nnx.initializers.he_normal(),
-            'kaiming': nnx.initializers.he_normal(),
-            'he_uniform': nnx.initializers.he_uniform(),
-            'kaiming_uniform': nnx.initializers.he_uniform(),
-            'lecun': nnx.initializers.lecun_normal(),
-            'lecun_uniform': nnx.initializers.lecun_uniform(),
-            'normal': nnx.initializers.normal(stddev=1.0),
-            'uniform': nnx.initializers.uniform(scale=1.0),
-        }
+        self.activation = activation
         
-        if init_scheme not in init_map:
-            raise ValueError(f"Unknown init_scheme: {init_scheme}. "
-                           f"Available options: {list(init_map.keys())}")
-        
-        return init_map[init_scheme]
 
     def __call__(self, x):
         """
-        Forward pass with weight normalization.
-        
-        Computes: y = g * (x @ V) + b, where V = W / ||W||_2 (column-wise)
+        Applies the dense layer to the input.
 
         Args:
-            x (jnp.array):
-                Input tensor, shape (batch, n_in).
+            x (jnp.ndarray):
+                Input array of shape (batch, n_in).
 
         Returns:
-            y (jnp.array):
-                Output tensor, shape (batch, n_out).
-                
+            jnp.ndarray:
+                Output array of shape (batch, n_out).
+
         Example:
-            >>> layer = Dense(n_in=64, n_out=32, seed=42)
-            >>> x = jax.random.uniform(jax.random.key(0), (100, 64))
-            >>> y = layer(x)  # shape: (100, 32)
+            >>> layer = DenseLayer(n_in=4, n_out=2)
+            >>> x = jnp.ones((3, 4))
+            >>> y = layer(x)  # shape: (3, 2)
         """
-        # Weight normalization: V = W / ||W||_2 (column-wise)
-        W_norm = jnp.linalg.norm(self.W, axis=0, keepdims=True)
-        V = self.W / (W_norm + 1e-8)
-        
-        # Compute output: y = g * (x @ V) + b
-        y = self.g * jnp.dot(x, V)
+        # Reconstruct kernel
+        g, v = self.g[...], self.v[...]
+        kernel = g * v
+
+        # Apply kernel and bias
+        y = jnp.dot(x, kernel)
         
         if self.b is not None:
-            y = y + self.b
+            y = y + self.b[...]
+
+        if self.activation is not None:
+            y = self.activation(y)
         
         return y

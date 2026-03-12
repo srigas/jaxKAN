@@ -5,7 +5,7 @@ from flax import nnx
 from typing import Union, List
 
 from ..layers import get_layer
-from ..layers.Dense import Dense
+from ..layers.Dense import DenseLayer
 from ..layers.Chebyshev import Cb
 from .utils import get_activation
 
@@ -112,7 +112,7 @@ class InnerBlock(nnx.Module):
             Activation function.
         input_embedding (ChebyshevEmbedding):
             Chebyshev embedding layer for input.
-        input_layer (Dense):
+        input_layer (DenseLayer):
             Dense layer after input embedding.
         hidden_layers (nnx.List):
             List of hidden Dense layers.
@@ -156,11 +156,11 @@ class InnerBlock(nnx.Module):
         self.input_embedding = ChebyshevEmbedding(D_e=D_e)
         
         # Input Dense layer: (D_e + 1) -> H
-        self.input_layer = Dense(n_in=D_e + 1, n_out=H, seed=seed)
+        self.input_layer = DenseLayer(n_in=D_e + 1, n_out=H, seed=seed)
         
         # Hidden Dense layers: H -> H
         self.hidden_layers = nnx.List([
-            Dense(n_in=H, n_out=H, seed=seed + i + 1)
+            DenseLayer(n_in=H, n_out=H, seed=seed + i + 1)
             for i in range(L)
         ])
         
@@ -168,7 +168,7 @@ class InnerBlock(nnx.Module):
         self.output_embedding = ChebyshevEmbedding(D_e=D_e)
         
         # Final Dense layer: H * (D_e + 1) -> m
-        self.output_layer = Dense(n_in=H * (D_e + 1), n_out=m, seed=seed)
+        self.output_layer = DenseLayer(n_in=H * (D_e + 1), n_out=m, seed=seed)
 
 
     def __call__(self, x_p):

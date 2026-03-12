@@ -15,13 +15,17 @@ Research
 
 If you have used jaxKAN in your research, we'd love to hear from you! Below, you can find a list of academic publications that have used jaxKAN.
 
+- Rigas, S., Verma, D., Alexandridis, G., & Wang, Y. (2026). Initialization schemes for Kolmogorov–Arnold networks: An empirical study. The Fourteenth International Conference on Learning Representations (ICLR 2026). https://openreview.net/forum?id=dwNXKkiP51 | `GitHub Reference <https://github.com/srigas/KAN_Initialization_Schemes>`_
+
+- Daniels, M., & Rigollet, P. (2026). Splat regression models. The Fourteenth International Conference on Learning Representations (ICLR 2026). https://openreview.net/forum?id=rubeJmT1XM
+
+- Rigas, S., Papaioannou, T., Trakadas, P., & Alexandridis, G. (2026). A Dynamic Framework for Grid Adaptation in Kolmogorov-Arnold Networks. arXiv. https://doi.org/10.48550/arXiv.2601.18672 | `GitHub Reference <https://github.com/srigas/kan_grid>`_
+
+- Leiva, F., Canales, C., Valenzuela, M., & Ruiz-del-Solar, J. (2026). Data-driven control of hydraulic impact hammers under strict operational and control constraints. arXiv. https://doi.org/10.48550/arXiv.2601.07813
+
 - Rigas, S., Anagnostopoulos, F., Papachristou, M., & Alexandridis, G. (2026). Training deep physics-informed Kolmogorov–Arnold networks. Computer Methods in Applied Mechanics and Engineering, 452, 118761. https://doi.org/10.1016/j.cma.2026.118761
 
 - Cerardi, N., Tolley, E., & Mishra, A. (2026). Solving the cosmological Vlasov–Poisson equations with physics-informed Kolmogorov–Arnold networks. Monthly Notices of the Royal Astronomical Society, 545, staf2241. https://doi.org/10.1093/mnras/staf2241 | `GitHub Reference <https://github.com/nicolas-cerardi/cdm-pikan>`_
-
-- Daniels, M., & Rigollet, P. (2025). Splat regression models (No. arXiv:2511.14042). arXiv. https://doi.org/10.48550/arXiv.2511.14042
-
-- Rigas, S., Verma, D., Alexandridis, G., & Wang, Y. (2025). Initialization schemes for Kolmogorov-Arnold networks: An empirical study. arXiv. https://doi.org/10.48550/ARXIV.2509.03417 | `GitHub Reference <https://github.com/srigas/KAN_Initialization_Schemes>`_
 
 - Howard, A. A., Jacob, B., & Stinis, P. (2025). Multifidelity kolmogorov–arnold networks. Machine Learning: Science and Technology, 6(3), 035038. https://doi.org/10.1088/2632-2153/adf702
 
