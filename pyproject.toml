@@ -56,7 +56,6 @@ doc = [
     "sphinx_design",
     "sphinx-autodoc-typehints",
     "nbsphinx",
-    "nbsphinx-link",
 	"pandoc",
 ]
 

@@ -35,8 +35,7 @@ extensions = [
     "sphinx_design",
     "sphinx.ext.mathjax", 
     "sphinx.ext.coverage",
-    "nbsphinx",
-    "nbsphinx_link"
+    "nbsphinx"
 ]
 
 autosummary_generate = True
