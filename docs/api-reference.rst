@@ -62,6 +62,28 @@ KAN Layer Classes
    :special-members: __init__, __call__
 
 
+KAN Grid Classes
+-----------------
+
+.. automodule:: jaxkan.grids.BaseGrid
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+   
+.. automodule:: jaxkan.grids.SplineGrid
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+
+.. automodule:: jaxkan.grids.RBFGrid
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__, __call__
+
+
 KAN Models
 --------------
 
