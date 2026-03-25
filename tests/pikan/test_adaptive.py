@@ -6,7 +6,15 @@ from flax import nnx
 import optax
 
 from jaxkan.models.KAN import KAN
-from jaxkan.pikan.adaptive import get_colloc_indices, lr_anneal
+from jaxkan.pikan.adaptive import (
+    apply_rba_weights,
+    get_causal_weights,
+    get_colloc_indices,
+    get_rad_indices,
+    get_rad_probabilities,
+    lr_anneal,
+    update_rba_weights,
+)
 
 
 @pytest.fixture
@@ -98,6 +106,81 @@ def test_get_colloc_indices_weighted_sampling(sample_collocs_pool, non_uniform_w
     
     assert indices.shape == (batch_size,), "Weighted sampling shape incorrect"
     assert jnp.all(indices >= 0) and jnp.all(indices < sample_collocs_pool.shape[0])
+
+
+def test_update_rba_weights_shape_and_finiteness():
+    """Test RBA weight updates preserve shape and finiteness."""
+    residuals = jnp.array([[1.0], [-2.0], [0.5]])
+    weights = jnp.ones_like(residuals)
+
+    updated = update_rba_weights(residuals, weights, gamma=0.9, eta=0.1)
+
+    assert updated.shape == residuals.shape, "Updated RBA weights shape incorrect"
+    assert jnp.all(jnp.isfinite(updated)), "Updated RBA weights contain non-finite values"
+
+
+def test_apply_rba_weights_stops_weight_gradients():
+    """Test that RBA weights are detached from the backward graph."""
+    residuals = jnp.array([[1.0], [2.0]])
+    weights = jnp.array([[3.0], [4.0]])
+
+    grad_w = jax.grad(lambda w: jnp.sum(apply_rba_weights(residuals, w)))(weights)
+    grad_r = jax.grad(lambda r: jnp.sum(apply_rba_weights(r, weights)))(residuals)
+
+    assert jnp.allclose(grad_w, 0.0), "RBA weights should have zero gradient after stop_gradient"
+    assert jnp.allclose(grad_r, weights), "Residual gradients should match the detached weights"
+
+
+def test_get_causal_weights_shape_and_detachment():
+    """Test causal weight computation shape and stopped-gradient behavior."""
+    losses = jnp.array([1.0, 2.0, 3.0])
+    causal_matrix = jnp.triu(jnp.ones((3, 3)), k=1).T
+
+    weights = get_causal_weights(losses, causal_matrix, causal_tol=0.5)
+    grad_losses = jax.grad(lambda vals: jnp.sum(get_causal_weights(vals, causal_matrix, 0.5)))(losses)
+
+    assert weights.shape == losses.shape, "Causal weights shape incorrect"
+    assert jnp.all(jnp.isfinite(weights)), "Causal weights contain non-finite values"
+    assert jnp.allclose(grad_losses, 0.0), "Causal weights should be detached from the backward graph"
+
+
+def test_get_rad_probabilities_normalized():
+    """Test RAD probabilities are positive and normalized."""
+    weighted_residuals = jnp.array([[1.0], [2.0], [0.5], [4.0]])
+
+    px = get_rad_probabilities(weighted_residuals, rad_a=1.0, rad_c=1.0)
+
+    assert px.shape == (4,), "RAD probability vector shape incorrect"
+    assert jnp.all(px > 0), "RAD probabilities should be positive"
+    assert jnp.allclose(jnp.sum(px), 1.0), "RAD probabilities should sum to 1"
+
+
+def test_get_rad_indices_updates_pool_and_samples(sample_collocs_pool):
+    """Test generic RAD resampling helper updates the pool and samples a sorted batch."""
+    residuals = jnp.arange(1, sample_collocs_pool.shape[0] + 1, dtype=jnp.float32).reshape(-1, 1)
+    pool_weights = jnp.ones_like(residuals)
+    old_indices = jnp.array([1, 3, 5])
+    batch_weights = jnp.array([[2.0], [3.0], [4.0]])
+
+    indices, updated_pool, px = get_rad_indices(
+        collocs_pool=sample_collocs_pool,
+        residuals=residuals,
+        old_indices=old_indices,
+        batch_weights=batch_weights,
+        pool_weights=pool_weights,
+        batch_size=4,
+        rad_a=1.0,
+        rad_c=1.0,
+        seed=42,
+    )
+
+    assert indices.shape == (4,), "RAD indices shape incorrect"
+    assert updated_pool.shape == pool_weights.shape, "Updated pool weights shape incorrect"
+    assert px.shape == (sample_collocs_pool.shape[0],), "RAD probabilities shape incorrect"
+    assert jnp.allclose(updated_pool[old_indices], batch_weights), "Old batch weights were not written back to the pool"
+
+    sampled_points = sample_collocs_pool[indices]
+    assert jnp.all(sampled_points[:-1, 0] <= sampled_points[1:, 0]), "RAD indices should be sorted by the first coordinate"
 
 
 def test_lr_anneal_shape():
