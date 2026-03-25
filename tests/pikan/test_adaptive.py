@@ -106,7 +106,7 @@ def test_lr_anneal_shape():
     grads_E = {'w': jnp.array([[1.0, 2.0], [3.0, 4.0]])}
     grads_B = {'w': jnp.array([[0.5, 1.0], [1.5, 2.0]])}
     
-    λ_E_new, λ_B_new = lr_anneal(grads_E, grads_B, λ_E=1.0, λ_B=1.0, grad_mixing=0.9)
+    λ_E_new, λ_B_new = lr_anneal((grads_E, grads_B), (1.0, 1.0), 0.9)
     
     assert isinstance(λ_E_new, jnp.ndarray) or isinstance(λ_E_new, float)
     assert isinstance(λ_B_new, jnp.ndarray) or isinstance(λ_B_new, float)
@@ -117,7 +117,7 @@ def test_lr_anneal_positive_weights():
     grads_E = {'w': jnp.array([[1.0, 2.0]])}
     grads_B = {'w': jnp.array([[0.5, 1.0]])}
     
-    λ_E_new, λ_B_new = lr_anneal(grads_E, grads_B, λ_E=1.0, λ_B=1.0, grad_mixing=0.9)
+    λ_E_new, λ_B_new = lr_anneal((grads_E, grads_B), (1.0, 1.0), 0.9)
     
     assert λ_E_new > 0, "Equation weight should be positive"
     assert λ_B_new > 0, "Boundary weight should be positive"
@@ -128,7 +128,7 @@ def test_lr_anneal_finite_values():
     grads_E = {'w': jnp.array([[1.0, 2.0], [3.0, 4.0]])}
     grads_B = {'w': jnp.array([[0.5, 1.0], [1.5, 2.0]])}
     
-    λ_E_new, λ_B_new = lr_anneal(grads_E, grads_B, λ_E=1.0, λ_B=1.0, grad_mixing=0.9)
+    λ_E_new, λ_B_new = lr_anneal((grads_E, grads_B), (1.0, 1.0), 0.9)
     
     assert jnp.isfinite(λ_E_new), "Equation weight should be finite"
     assert jnp.isfinite(λ_B_new), "Boundary weight should be finite"
@@ -140,7 +140,7 @@ def test_lr_anneal_balancing():
     grads_E = {'w': jnp.array([[10.0, 20.0]])}
     grads_B = {'w': jnp.array([[0.1, 0.2]])}
     
-    λ_E_new, λ_B_new = lr_anneal(grads_E, grads_B, λ_E=1.0, λ_B=1.0, grad_mixing=0.5)
+    λ_E_new, λ_B_new = lr_anneal((grads_E, grads_B), (1.0, 1.0), 0.5)
     
     # When PDE gradients are larger, its weight should decrease (and BC weight increase)
     # This is because we want to balance the gradient magnitudes
@@ -153,10 +153,10 @@ def test_lr_anneal_grad_mixing_effect():
     grads_B = {'w': jnp.array([[3.0, 4.0]])}
     
     # High mixing (more weight on previous values)
-    λ_E_high, λ_B_high = lr_anneal(grads_E, grads_B, λ_E=2.0, λ_B=3.0, grad_mixing=0.99)
+    λ_E_high, λ_B_high = lr_anneal((grads_E, grads_B), (2.0, 3.0), 0.99)
     
     # Low mixing (more weight on new values)
-    λ_E_low, λ_B_low = lr_anneal(grads_E, grads_B, λ_E=2.0, λ_B=3.0, grad_mixing=0.01)
+    λ_E_low, λ_B_low = lr_anneal((grads_E, grads_B), (2.0, 3.0), 0.01)
     
     # High mixing should be closer to original values
     assert abs(λ_E_high - 2.0) < abs(λ_E_low - 2.0)
@@ -168,7 +168,7 @@ def test_lr_anneal_zero_gradients():
     grads_E = {'w': jnp.array([[1e-10, 1e-10]])}
     grads_B = {'w': jnp.array([[1e-10, 1e-10]])}
     
-    λ_E_new, λ_B_new = lr_anneal(grads_E, grads_B, λ_E=1.0, λ_B=1.0, grad_mixing=0.9)
+    λ_E_new, λ_B_new = lr_anneal((grads_E, grads_B), (1.0, 1.0), 0.9)
     
     assert jnp.isfinite(λ_E_new), "Should handle tiny gradients without NaN/Inf"
     assert jnp.isfinite(λ_B_new), "Should handle tiny gradients without NaN/Inf"
@@ -189,8 +189,64 @@ def test_lr_anneal_with_real_model():
     grads_E = nnx.grad(loss_E)(model)
     grads_B = nnx.grad(loss_B)(model)
     
-    λ_E_new, λ_B_new = lr_anneal(grads_E, grads_B, λ_E=1.0, λ_B=1.0, grad_mixing=0.9)
+    λ_E_new, λ_B_new = lr_anneal((grads_E, grads_B), (1.0, 1.0), 0.9)
     
     assert jnp.isfinite(λ_E_new), "Real model gradient annealing should work"
     assert jnp.isfinite(λ_B_new), "Real model gradient annealing should work"
     assert λ_E_new > 0 and λ_B_new > 0, "Weights should be positive"
+
+
+def test_lr_anneal_single_term():
+    """Test generalized lr_anneal with a single loss term."""
+    grads = ({'w': jnp.array([[1.0, 2.0]])},)
+    lambdas = (2.0,)
+
+    updated = lr_anneal(grads, lambdas, 0.9)
+
+    assert len(updated) == 1, "Single-term annealing should return one weight"
+    assert jnp.isfinite(updated[0]), "Single updated weight should be finite"
+    assert updated[0] > 0, "Single updated weight should remain positive"
+
+
+def test_lr_anneal_generalized_multi_term():
+    """Test generalized lr_anneal with more than two loss terms."""
+    grads = (
+        {'w': jnp.array([[10.0, 20.0]])},
+        {'w': jnp.array([[1.0, 2.0]])},
+        {'w': jnp.array([[0.1, 0.2]])},
+    )
+    lambdas = (1.0, 1.0, 1.0)
+
+    updated = lr_anneal(grads, lambdas, 0.5)
+
+    assert len(updated) == 3, "Should return one updated weight per gradient term"
+    assert all(jnp.isfinite(val) for val in updated), "Updated weights should be finite"
+    assert all(val > 0 for val in updated), "Updated weights should remain positive"
+    assert updated[2] > updated[1] > updated[0], "Smaller gradient norms should receive larger weights"
+
+
+def test_lr_anneal_four_terms():
+    """Test generalized lr_anneal with four loss terms."""
+    grads = (
+        {'w': jnp.array([[100.0, 200.0]])},
+        {'w': jnp.array([[10.0, 20.0]])},
+        {'w': jnp.array([[1.0, 2.0]])},
+        {'w': jnp.array([[0.1, 0.2]])},
+    )
+    lambdas = (1.0, 1.0, 1.0, 1.0)
+
+    updated = lr_anneal(grads, lambdas, 0.5)
+
+    assert len(updated) == 4, "Should return one updated weight per gradient term"
+    assert all(jnp.isfinite(val) for val in updated), "Updated weights should be finite"
+    assert all(val > 0 for val in updated), "Updated weights should remain positive"
+    assert updated[3] > updated[2] > updated[1] > updated[0], "Weights should inversely track gradient norm magnitude"
+
+
+def test_lr_anneal_generalized_length_mismatch():
+    """Test generalized lr_anneal input validation."""
+    grads = ({'w': jnp.array([[1.0]])}, {'w': jnp.array([[2.0]])})
+    lambdas = (1.0,)
+
+    with pytest.raises(ValueError, match="same number of terms"):
+        lr_anneal(grads, lambdas, 0.9)

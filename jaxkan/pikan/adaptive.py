@@ -42,41 +42,45 @@ def get_colloc_indices(collocs_pool, batch_size, px, seed):
 
 
 @nnx.jit
-def lr_anneal(grads_E, grads_B, λ_E, λ_B, grad_mixing):
+def _lr_anneal_impl(grads, lambdas, grad_mixing):
+    norms = jnp.stack(tuple(optax.tree.norm(grad) for grad in grads))
+    norm_sum = jnp.sum(norms)
+    hats = norm_sum / (norms + 1e-5 * norm_sum)
+
+    return tuple(
+        grad_mixing * lambdas[i] + (1.0 - grad_mixing) * hats[i]
+        for i in range(len(lambdas))
+    )
+
+
+def lr_anneal(grads, lambdas, grad_mixing):
     """
     Perform the learning rate annealing algorithm introduced in "Understanding and mitigating gradient pathologies in physics-informed neural networks"
-    
-    Args:
-        grads_E (pytree):
-            Gradients from equation/PDE loss.
-        grads_B (pytree):
-            Gradients from boundary/initial condition loss.
-        λ_E (float):
-            Current equation loss weight.
-        λ_B (float):
-            Current boundary loss weight.
-        grad_mixing (float):
-            Mixing coefficient for exponential moving average (0 to 1).
-    
-    Returns:
-        λ_E_new (float):
-            Updated pde loss weight.
-        λ_B_new (float):
-            Updated boundary loss weight.
-    
-    Example:
-        >>> λ_E_new, λ_B_new = lr_anneal(grads_E, grads_B, λ_E=1.0, λ_B=1.0, grad_mixing=0.9)
-    """
-    
-    norm_E = optax.global_norm(grads_E)
-    norm_B = optax.global_norm(grads_B)
-    norm_sum = norm_E + norm_B
-                
-    λ_E_hat = norm_sum / (norm_E + 1e-5*norm_sum)
-    λ_B_hat = norm_sum / (norm_B + 1e-5*norm_sum)
-                        
-    λ_E_new = grad_mixing*λ_E + (1.0 - grad_mixing)*λ_E_hat
-    λ_B_new = grad_mixing*λ_B + (1.0 - grad_mixing)*λ_B_hat
 
-    return λ_E_new, λ_B_new
+    Args:
+        grads (tuple | list):
+            Tuple/list of gradient pytrees, one per loss term.
+        lambdas (tuple | list):
+            Tuple/list of current global loss weights, matching ``grads`` in order.
+        grad_mixing (float):
+            Exponential moving average coefficient.
+
+    Returns:
+        tuple:
+            Updated global loss weights in the same logical order as the inputs.
+
+    Example:
+        >>> λs_new = lr_anneal((grads_E, grads_B, grads_aux), (1.0, 1.0, 1.0), 0.9)
+    """
+
+    grads = tuple(grads)
+    lambdas = tuple(lambdas)
+
+    if len(grads) != len(lambdas):
+        raise ValueError("grads and lambdas must have the same number of terms.")
+
+    if len(grads) == 0:
+        raise ValueError("lr_anneal requires at least one gradient/weight pair.")
+
+    return _lr_anneal_impl(grads, lambdas, grad_mixing)
 
