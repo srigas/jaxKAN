@@ -6,7 +6,6 @@ from flax import nnx
 
 from jaxkan.models.KAN import KAN
 from jaxkan.pikan.pde import (
-    gradf,
     get_ac_res,
     get_burgers_res,
     get_kdv_res,
@@ -30,62 +29,6 @@ def simple_model():
 def sample_collocs():
     """Create sample 2D collocation points."""
     return jnp.array([[0.1, 0.2], [0.3, 0.4], [0.5, 0.6]])
-
-
-def test_gradf_first_order(simple_model):
-    """Test first-order gradient computation."""
-    def u(x):
-        return simple_model(x)
-    
-    u_x = gradf(u, [0])
-    
-    collocs = jnp.array([[0.5, 0.5]])
-    grad_val = u_x(collocs)
-    
-    assert grad_val.shape == (1, 1), "Gradient shape incorrect"
-    assert jnp.all(jnp.isfinite(grad_val)), "Gradient contains non-finite values"
-
-
-def test_gradf_second_order(simple_model):
-    """Test second-order gradient computation."""
-    def u(x):
-        return simple_model(x)
-    
-    u_xx = gradf(u, [1, 1])
-    
-    collocs = jnp.array([[0.5, 0.5]])
-    grad_val = u_xx(collocs)
-    
-    assert grad_val.shape == (1, 1), "Second gradient shape incorrect"
-    assert jnp.all(jnp.isfinite(grad_val)), "Second gradient contains non-finite values"
-
-
-def test_gradf_mixed_partial(simple_model):
-    """Test mixed partial derivative computation."""
-    def u(x):
-        return simple_model(x)
-    
-    u_tx = gradf(u, [0, 1])  # d²u/dtdx
-    
-    collocs = jnp.array([[0.5, 0.5]])
-    grad_val = u_tx(collocs)
-    
-    assert grad_val.shape == (1, 1), "Mixed partial shape incorrect"
-    assert jnp.all(jnp.isfinite(grad_val)), "Mixed partial contains non-finite values"
-
-
-def test_gradf_higher_order(simple_model):
-    """Test higher-order gradient computation."""
-    def u(x):
-        return simple_model(x)
-    
-    u_xxxx = gradf(u, [1, 1, 1, 1])  # Fourth derivative
-    
-    collocs = jnp.array([[0.5, 0.5]])
-    grad_val = u_xxxx(collocs)
-    
-    assert grad_val.shape == (1, 1), "Fourth derivative shape incorrect"
-    assert jnp.all(jnp.isfinite(grad_val)), "Fourth derivative contains non-finite values"
 
 
 def test_allen_cahn_residual(simple_model, sample_collocs):

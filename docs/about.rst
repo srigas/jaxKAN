@@ -15,6 +15,8 @@ Research
 
 If you have used jaxKAN in your research, we'd love to hear from you! Below, you can find a list of academic publications that have used jaxKAN.
 
+- Howard, A. A., Zolman, N., Jacob, B., Brunton, S. L., & Stinis, P. (2026). SINDy-KANs: Sparse identification of non-linear dynamics through Kolmogorov-Arnold networks. arXiv. https://doi.org/10.48550/arXiv.2603.18548
+
 - Rigas, S., Verma, D., Alexandridis, G., & Wang, Y. (2026). Initialization schemes for Kolmogorov–Arnold networks: An empirical study. The Fourteenth International Conference on Learning Representations (ICLR 2026). https://openreview.net/forum?id=dwNXKkiP51 | `GitHub Reference <https://github.com/srigas/KAN_Initialization_Schemes>`_
 
 - Daniels, M., & Rigollet, P. (2026). Splat regression models. The Fourteenth International Conference on Learning Representations (ICLR 2026). https://openreview.net/forum?id=rubeJmT1XM

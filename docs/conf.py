@@ -12,7 +12,7 @@ project = 'jaxkan'
 copyright = '2026, Spyros Rigas, Michalis Papachristou'
 author = 'Spyros Rigas, Michalis Papachristou'
 
-release = '0.3.6'
+release = '0.3.7'
 
 # -- General configuration ------------------------------------------------
 

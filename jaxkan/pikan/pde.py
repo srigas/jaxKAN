@@ -2,46 +2,6 @@ import jax
 import jax.numpy as jnp
 
 
-def gradf(f, indices):
-    """
-    Computes gradients of arbitrary order and mixed partial derivatives.
-    
-    Args:
-        f (function):
-            Function to be differentiated.
-        indices (list[int]):
-            List of coordinate indices to differentiate with respect to, in order.
-            Each application takes a gradient w.r.t. the specified index.
-    
-    Returns:
-        g (function):
-            Gradient of f with respect to the specified indices in sequence.
-            
-    Example:
-        >>> model = KAN([2,6,1], 'spline', {}, True)
-        >>>
-        >>> def u(x):
-        >>>    y = model(x)
-        >>>    return y
-        >>>
-        >>> u_t = gradf(u, [0]) # 1st-order gradient w.r.t. first coordinate
-        >>> u_xx = gradf(u, [1, 1]) # 2nd-order gradient w.r.t. second coordinate
-        >>> u_tx = gradf(u, [0, 1]) # mixed partial derivative: d²u/dtdx
-    """
-    def grad_single(g, idx):
-        def grad_fn(x):
-            return jax.vmap(
-                lambda xi: jax.grad(lambda x_single: g(x_single.reshape(1, -1))[0, 0])(xi)[idx]
-            )(x).reshape(-1, 1)
-        return grad_fn
-    
-    g = f
-    for idx in indices:
-        g = grad_single(g, idx)
-        
-    return g
-
-
 def get_ac_res(D=1e-4, c=5.0):
     """
     Returns the Allen-Cahn equation residual function (2D).
@@ -65,19 +25,21 @@ def get_ac_res(D=1e-4, c=5.0):
     """
     D = jnp.array(D, dtype=jnp.float32)
     c = jnp.array(c, dtype=jnp.float32)
-    
+
     def ac_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        u_t = gradf(u, [0])
-        u_xx = gradf(u, [1, 1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
+        u_xx_fn = jax.grad(u_x_fn, argnums=1)
 
-        res = u_t(collocs) - D*u_xx(collocs) - c*(u(collocs)-(u(collocs)**3))
+        def point_res(t, x):
+            u = u_fn(t, x)
+            return u_t_fn(t, x) - D * u_xx_fn(t, x) - c * (u - u**3)
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return ac_res
 
 
@@ -101,19 +63,20 @@ def get_diffusion_res(D=0.25):
         >>> diffusion_res = get_diffusion_res(D=0.5)
     """
     D = jnp.array(D, dtype=jnp.float32)
-    
+
     def diffusion_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        u_t = gradf(u, [0])
-        u_xx = gradf(u, [1, 1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
+        u_xx_fn = jax.grad(u_x_fn, argnums=1)
 
-        res = u_t(collocs) - D*u_xx(collocs)
+        def point_res(t, x):
+            return u_t_fn(t, x) - D * u_xx_fn(t, x)
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return diffusion_res
 
 
@@ -136,23 +99,22 @@ def get_burgers_res(nu=0.01/jnp.pi):
         >>> # Use custom parameters
         >>> burgers_res = get_burgers_res(nu=0.001)
     """
-    nu = jnp.array(nu, dtype=float)
-    
+    nu = jnp.array(nu, dtype=jnp.float32)
+
     def burgers_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        # Physics Loss Terms
-        u_t = gradf(u, [0])
-        u_x = gradf(u, [1])
-        u_xx = gradf(u, [1, 1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
+        u_xx_fn = jax.grad(u_x_fn, argnums=1)
 
-        # Get all residuals
-        res = u_t(collocs) + u(collocs)*u_x(collocs) - nu*u_xx(collocs)
+        def point_res(t, x):
+            u = u_fn(t, x)
+            return u_t_fn(t, x) + u * u_x_fn(t, x) - nu * u_xx_fn(t, x)
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return burgers_res
 
 
@@ -179,20 +141,22 @@ def get_kdv_res(eta=1.0, mu=0.022):
     """
     eta = jnp.array(eta, dtype=jnp.float32)
     mu = jnp.array(mu, dtype=jnp.float32)
-    
+
     def kdv_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        u_t = gradf(u, [0])
-        u_x = gradf(u, [1])
-        u_xxx = gradf(u, [1, 1, 1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
+        u_xx_fn = jax.grad(u_x_fn, argnums=1)
+        u_xxx_fn = jax.grad(u_xx_fn, argnums=1)
 
-        res = u_t(collocs) + eta*u(collocs)*u_x(collocs) + (mu**2)*u_xxx(collocs)
+        def point_res(t, x):
+            u = u_fn(t, x)
+            return u_t_fn(t, x) + eta * u * u_x_fn(t, x) + (mu**2) * u_xxx_fn(t, x)
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return kdv_res
 
 
@@ -216,19 +180,21 @@ def get_sg_res(D=1.0):
         >>> sg_res = get_sg_res(D=2.0)
     """
     D = jnp.array(D, dtype=jnp.float32)
-    
+
     def sg_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        u_tt = gradf(u, [0, 0])
-        u_xx = gradf(u, [1, 1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_tt_fn = jax.grad(u_t_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
+        u_xx_fn = jax.grad(u_x_fn, argnums=1)
 
-        res = u_tt(collocs) - D*u_xx(collocs) + jnp.sin(u(collocs))
+        def point_res(t, x):
+            return u_tt_fn(t, x) - D * u_xx_fn(t, x) + jnp.sin(u_fn(t, x))
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return sg_res
 
 
@@ -252,19 +218,19 @@ def get_advection_res(c=20.0):
         >>> advection_res = get_advection_res(c=10.0)
     """
     c = jnp.array(c, dtype=jnp.float32)
-    
+
     def advection_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        u_t = gradf(u, [0])
-        u_x = gradf(u, [1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
 
-        res = u_t(collocs) + c*u_x(collocs)
+        def point_res(t, x):
+            return u_t_fn(t, x) + c * u_x_fn(t, x)
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return advection_res
 
 
@@ -294,23 +260,24 @@ def get_helmholtz_res(a1=1.0, a2=4.0, k=1.0):
     a1 = jnp.array(a1, dtype=jnp.float32)
     a2 = jnp.array(a2, dtype=jnp.float32)
     k = jnp.array(k, dtype=jnp.float32)
-    
+
     def helmholtz_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        factor = k**2 - (jnp.pi**2) * (a1**2 + a2**2)
 
-        u_xx = gradf(u, [0, 0])
-        u_yy = gradf(u, [1, 1])
+        def u_fn(x, y):
+            return model(jnp.array([[x, y]]))[0, 0]
 
-        # source term
-        factor = k**2 - (jnp.pi**2)*(a1**2 + a2**2)
-        f = factor*jnp.sin(jnp.pi*a1*collocs[:,[0]])*jnp.sin(jnp.pi*a2*collocs[:,[1]])
+        u_x_fn = jax.grad(u_fn, argnums=0)
+        u_xx_fn = jax.grad(u_x_fn, argnums=0)
+        u_y_fn = jax.grad(u_fn, argnums=1)
+        u_yy_fn = jax.grad(u_y_fn, argnums=1)
 
-        res = u_xx(collocs) + u_yy(collocs) + (k**2)*u(collocs) - f
+        def point_res(x, y):
+            f = factor * jnp.sin(jnp.pi * a1 * x) * jnp.sin(jnp.pi * a2 * y)
+            return u_xx_fn(x, y) + u_yy_fn(x, y) + (k**2) * u_fn(x, y) - f
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return helmholtz_res
 
 
@@ -337,22 +304,24 @@ def get_poisson_res(a1=4.0, a2=4.0):
     """
     a1 = jnp.array(a1, dtype=jnp.float32)
     a2 = jnp.array(a2, dtype=jnp.float32)
-    
+
     def poisson_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        factor = -(jnp.pi**2) * (a1**2 + a2**2)
 
-        u_xx = gradf(u, [0, 0])
-        u_yy = gradf(u, [1, 1])
+        def u_fn(x, y):
+            return model(jnp.array([[x, y]]))[0, 0]
 
-        factor = -(jnp.pi**2)*(a1**2 + a2**2)
-        f = factor*jnp.sin(jnp.pi*a1*collocs[:,[0]])*jnp.sin(jnp.pi*a2*collocs[:,[1]])
+        u_x_fn = jax.grad(u_fn, argnums=0)
+        u_xx_fn = jax.grad(u_x_fn, argnums=0)
+        u_y_fn = jax.grad(u_fn, argnums=1)
+        u_yy_fn = jax.grad(u_y_fn, argnums=1)
 
-        res = u_xx(collocs) + u_yy(collocs) - f
+        def point_res(x, y):
+            f = factor * jnp.sin(jnp.pi * a1 * x) * jnp.sin(jnp.pi * a2 * y)
+            return u_xx_fn(x, y) + u_yy_fn(x, y) - f
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return poisson_res
 
 
@@ -376,19 +345,21 @@ def get_wave_res(c=4.0):
         >>> wave_res = get_wave_res(c=2.0)
     """
     c = jnp.array(c, dtype=jnp.float32)
-    
+
     def wave_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        u_tt = gradf(u, [0, 0])
-        u_xx = gradf(u, [1, 1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_tt_fn = jax.grad(u_t_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
+        u_xx_fn = jax.grad(u_x_fn, argnums=1)
 
-        res = u_tt(collocs) - c*u_xx(collocs)
+        def point_res(t, x):
+            return u_tt_fn(t, x) - c * u_xx_fn(t, x)
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return wave_res
 
 
@@ -418,19 +389,21 @@ def get_ks_res(alpha=100/16, beta=100/(16**2), gamma=100/(16**4)):
     alpha = jnp.array(alpha, dtype=jnp.float32)
     beta = jnp.array(beta, dtype=jnp.float32)
     gamma = jnp.array(gamma, dtype=jnp.float32)
-    
+
     def ks_res(model, collocs):
-        def u(x):
-            y = model(x)
-            return y
+        def u_fn(t, x):
+            return model(jnp.array([[t, x]]))[0, 0]
 
-        u_t = gradf(u, [0])
-        u_x = gradf(u, [1])
-        u_xx = gradf(u, [1, 1])
-        u_xxxx = gradf(u, [1, 1, 1, 1])
+        u_t_fn = jax.grad(u_fn, argnums=0)
+        u_x_fn = jax.grad(u_fn, argnums=1)
+        u_xx_fn = jax.grad(u_x_fn, argnums=1)
+        u_xxx_fn = jax.grad(u_xx_fn, argnums=1)
+        u_xxxx_fn = jax.grad(u_xxx_fn, argnums=1)
 
-        res = u_t(collocs) + alpha*u(collocs)*u_x(collocs) + beta*u_xx(collocs) + gamma*u_xxxx(collocs)
+        def point_res(t, x):
+            u = u_fn(t, x)
+            return u_t_fn(t, x) + alpha * u * u_x_fn(t, x) + beta * u_xx_fn(t, x) + gamma * u_xxxx_fn(t, x)
 
-        return res
-    
+        return jax.vmap(point_res, in_axes=(0, 0))(collocs[:, 0], collocs[:, 1]).reshape(-1, 1)
+
     return ks_res
